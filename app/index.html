@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8a6a1f">
+<title>บันทึกงานซ่อม</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
+<link rel="stylesheet" href="app.css?v=1">
+</head>
+<body>
+
+<!-- ══════════════ ยังไม่ได้ตั้งค่า ══════════════ -->
+<section id="setup" class="setup-note" hidden>
+  <h2>ยังไม่ได้ตั้งค่าการเชื่อมต่อ</h2>
+  <p>เปิดไฟล์ <code>app/config.js</code> แล้วใส่ค่า 2 อันนี้จาก Supabase Dashboard → Project Settings → Data API</p>
+  <ol>
+    <li><code>SUPABASE_URL</code> — Project URL</li>
+    <li><code>SUPABASE_ANON_KEY</code> — anon / public key</li>
+  </ol>
+  <p class="hint">ขั้นตอนเต็มอยู่ในไฟล์ <code>docs/ติดตั้ง.md</code></p>
+</section>
+
+<!-- ══════════════ ล็อกอิน ══════════════ -->
+<section id="login" class="screen-login" hidden>
+  <div class="login-card">
+    <div class="login-brand">
+      <span class="login-mark">◈</span>
+      <h1>บันทึกงานซ่อม</h1>
+      <p class="muted">Goldsmith Specialist</p>
+    </div>
+
+    <div id="loginStep1">
+      <p class="label">เลือกผู้ใช้</p>
+      <div id="userChips" class="chip-grid"></div>
+    </div>
+
+    <div id="loginStep2" hidden>
+      <p class="label">รหัส PIN ของ <b id="loginName"></b></p>
+      <div class="pin-dots" id="pinDots"></div>
+      <div class="keypad">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+        <button data-k="back" class="key-alt">⌫</button>
+        <button data-k="0">0</button>
+        <button data-k="cancel" class="key-alt">ยกเลิก</button>
+      </div>
+      <p id="pinError" class="error pin-error" hidden></p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ แอป ══════════════ -->
+<div id="app" hidden>
+
+  <header class="topbar">
+    <div class="topbar-title">
+      <span class="mark">◈</span>
+      <span>บันทึกงานซ่อม</span>
+    </div>
+    <div class="topbar-right">
+      <button id="btnSync" class="sync-btn" data-state="ok" title="กดเพื่อซิงก์ทันที">
+        <span class="dot"></span><span id="syncText">พร้อม</span>
+      </button>
+      <button id="btnUser" class="user-btn"><span id="curUser"></span> ▾</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <main>
+    <!-- ─────────── หน้าบันทึกงาน ─────────── -->
+    <section id="view-form" class="view">
+      <div class="view-head">
+        <h2 id="formTitle">งานซ่อมใหม่</h2>
+        <span id="formJobId" class="job-id"></span>
+      </div>
+
+      <div class="stepper" id="stepper">
+        <button class="step is-on" data-step="1"><b>1</b> รับงาน</button>
+        <button class="step" data-step="2"><b>2</b> ปิดงาน</button>
+      </div>
+
+      <div class="step-panel" data-panel="1">
+        <div class="field">
+          <label for="fDocNo">เลขที่ใบส่งซ่อม <i class="req">*</i></label>
+          <div class="input-row">
+            <input id="fDocNo" type="text" placeholder="ARSM1-FIX2511-00005" autocomplete="off">
+            <button id="btnScan" class="btn-icon" title="สแกน QR">⛶</button>
+          </div>
+          <p class="hint" id="branchHint"></p>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="fDateIn">วันที่รับงาน <span class="be" data-be="fDateIn"></span></label>
+            <input id="fDateIn" type="date">
+          </div>
+          <div class="field">
+            <label for="fBranch">สาขา</label>
+            <input id="fBranch" type="text" list="dlBranch" placeholder="เติมให้อัตโนมัติ" autocomplete="off">
+            <datalist id="dlBranch"></datalist>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field"><label for="fProductType">ประเภทสินค้า <i class="req">*</i></label><select id="fProductType"></select></div>
+          <div class="field"><label for="fPattern">ลวดลาย <i class="req">*</i></label><select id="fPattern"></select></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field"><label for="fPart">Part</label><select id="fPart"></select></div>
+          <div class="field">
+            <label for="fWeightIn">น้ำหนักรับซ่อม (ก.) <i class="req">*</i></label>
+            <input id="fWeightIn" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field"><label for="fDefectKind">อาการชำรุด — ลักษณะ <i class="req">*</i></label><select id="fDefectKind"></select></div>
+          <div class="field"><label for="fDefectSpot">อาการชำรุด — ตำแหน่ง <i class="req">*</i></label><select id="fDefectSpot"></select></div>
+        </div>
+
+        <p class="label">ภาพถ่าย</p>
+        <div class="photo-grid">
+          <div class="photo-slot" data-slot="imgDoc"><span>ใบส่งซ่อม</span></div>
+          <div class="photo-slot" data-slot="imgDefect"><span>ภาพชำรุด <i class="req">*</i></span></div>
+          <div class="photo-slot" data-slot="imgWeightIn"><span>ชั่งตอนรับ</span></div>
+        </div>
+      </div>
+
+      <div class="step-panel" data-panel="2" hidden>
+        <div class="field">
+          <label for="fStatus">สถานะ</label>
+          <select id="fStatus">
+            <option>รับงาน</option><option>กำลังซ่อม</option>
+            <option>เสร็จสิ้น</option><option>ไม่ซ่อม</option>
+          </select>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="fWeightOut">น้ำหนักส่ง (ก.) <i class="req">*</i></label>
+            <input id="fWeightOut" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
+          </div>
+          <div class="field">
+            <label for="fWeightAdd">นน.เติม (ก.)</label>
+            <input id="fWeightAdd" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
+          </div>
+        </div>
+
+        <div id="diffBox" class="diff-box" hidden>
+          <span class="diff-label">ส่วนต่างน้ำหนัก</span>
+          <span id="diffValue" class="diff-value">—</span>
+        </div>
+
+        <div class="grid-2">
+          <div class="field"><label for="fMethod">วิธีซ่อม <i class="req">*</i></label><select id="fMethod"></select></div>
+          <div class="field"><label for="fTechnician">ช่างผู้ซ่อม <i class="req">*</i></label><select id="fTechnician"></select></div>
+        </div>
+
+        <div class="field">
+          <label for="fDateOut">วันที่ปิดงาน <span class="be" data-be="fDateOut"></span></label>
+          <input id="fDateOut" type="date">
+          <p class="hint">เติมให้อัตโนมัติเมื่อเปลี่ยนสถานะเป็น “เสร็จสิ้น”</p>
+        </div>
+
+        <div class="field"><label for="fNotes">หมายเหตุ</label><textarea id="fNotes" rows="2"></textarea></div>
+
+        <p class="label">ภาพถ่าย</p>
+        <div class="photo-grid">
+          <div class="photo-slot" data-slot="imgWeightOut"><span>ชั่งตอนส่ง</span></div>
+          <div class="photo-slot" data-slot="imgDone"><span>งานเสร็จ</span></div>
+        </div>
+      </div>
+
+      <div id="formError" class="error" hidden></div>
+
+      <div class="form-actions">
+        <button id="btnCancelEdit" class="btn-ghost" hidden>ยกเลิก</button>
+        <button id="btnSave" class="btn-primary">บันทึก</button>
+      </div>
+    </section>
+
+    <!-- ─────────── หน้ารายการ ─────────── -->
+    <section id="view-list" class="view" hidden>
+      <div class="view-head"><h2>รายการงานซ่อม</h2></div>
+      <div class="field">
+        <input id="listSearch" type="search" placeholder="ค้นหา เลขงาน / ใบซ่อม / ลวดลาย / สาขา">
+      </div>
+      <div class="filter-row" id="statusFilter">
+        <button class="pill is-on" data-status="">ทั้งหมด</button>
+        <button class="pill" data-status="รับงาน">รับงาน</button>
+        <button class="pill" data-status="กำลังซ่อม">กำลังซ่อม</button>
+        <button class="pill" data-status="เสร็จสิ้น">เสร็จสิ้น</button>
+        <button class="pill" data-status="ไม่ซ่อม">ไม่ซ่อม</button>
+      </div>
+      <p id="listCount" class="muted small"></p>
+      <div id="jobList" class="job-list"></div>
+    </section>
+
+    <!-- ─────────── หน้ารายงาน ─────────── -->
+    <section id="view-report" class="view" hidden>
+      <div class="view-head"><h2>รายงาน</h2></div>
+      <div class="grid-2">
+        <div class="field"><label for="rFrom">ตั้งแต่ <span class="be" data-be="rFrom"></span></label><input id="rFrom" type="date"></div>
+        <div class="field"><label for="rTo">ถึง <span class="be" data-be="rTo"></span></label><input id="rTo" type="date"></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label for="rBranch">สาขา</label><select id="rBranch"></select></div>
+        <div class="field"><label for="rTech">ช่าง</label><select id="rTech"></select></div>
+      </div>
+      <p id="reportScope" class="muted small"></p>
+
+      <div class="report-block">
+        <h3>1 · จัดอันดับอาการชำรุด</h3>
+        <div id="repDefects" class="bars"></div>
+        <h4>อาการชำรุด × ลวดลาย</h4>
+        <div class="table-scroll"><table id="repMatrix" class="matrix"></table></div>
+      </div>
+
+      <div class="report-block">
+        <h3>2 · สรุปน้ำหนักทองสูญหาย</h3>
+        <div id="repLossTotal" class="loss-total"></div>
+        <h4>ต่อเดือน</h4>
+        <div id="repLossMonth" class="bars"></div>
+        <h4>ต่อวิธีซ่อม</h4>
+        <div id="repLossMethod" class="bars"></div>
+      </div>
+
+      <div class="report-block">
+        <h3>3 · ผลงานรายช่าง</h3>
+        <div class="table-scroll"><table id="repTech" class="matrix"></table></div>
+      </div>
+    </section>
+
+    <!-- ─────────── หน้าตั้งค่า ─────────── -->
+    <section id="view-settings" class="view" hidden>
+      <div class="view-head"><h2>ตั้งค่า</h2></div>
+
+      <div class="report-block">
+        <h3>การเชื่อมต่อ</h3>
+        <div id="syncInfo" class="mini-list"></div>
+        <div class="btn-col">
+          <button id="btnSyncNow" class="btn-ghost">⟳ ซิงก์เดี๋ยวนี้</button>
+        </div>
+      </div>
+
+      <div class="report-block">
+        <h3>ช่างผู้ซ่อม</h3>
+        <div id="listTech" class="mini-list"></div>
+        <div class="input-row">
+          <input id="newTech" type="text" placeholder="ชื่อช่างใหม่">
+          <button class="btn-sm" id="btnAddTech">เพิ่ม</button>
+        </div>
+      </div>
+
+      <div class="report-block">
+        <h3>รายการตัวเลือก</h3>
+        <div class="field">
+          <label for="listPicker">เลือกรายการที่จะแก้</label>
+          <select id="listPicker">
+            <option value="patterns">ลวดลาย</option>
+            <option value="productTypes">ประเภทสินค้า</option>
+            <option value="parts">Part</option>
+            <option value="defectKinds">อาการชำรุด — ลักษณะ</option>
+            <option value="defectSpots">อาการชำรุด — ตำแหน่ง</option>
+            <option value="methods">วิธีซ่อม</option>
+          </select>
+        </div>
+        <div id="listItems" class="mini-list"></div>
+        <div class="input-row">
+          <input id="newItem" type="text" placeholder="เพิ่มค่าใหม่">
+          <button class="btn-sm" id="btnAddItem">เพิ่ม</button>
+        </div>
+      </div>
+
+      <div class="report-block">
+        <h3>ข้อมูล</h3>
+        <div class="btn-col">
+          <button id="btnExport" class="btn-ghost">📥 ส่งออกเป็น CSV (เปิดใน Excel)</button>
+          <button id="btnSignOut" class="btn-danger-ghost">ออกจากระบบ</button>
+        </div>
+        <p class="hint">ผู้ใช้และ PIN จัดการที่ Supabase → Authentication → Users</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab is-on" data-view="form"><span>✎</span>บันทึก</button>
+    <button class="tab" data-view="list"><span>☰</span>รายการ</button>
+    <button class="tab" data-view="report"><span>▤</span>รายงาน</button>
+    <button class="tab" data-view="settings"><span>⚙</span>ตั้งค่า</button>
+  </nav>
+</div>
+
+<div id="scanner" class="modal" hidden>
+  <div class="modal-inner">
+    <video id="scanVideo" playsinline muted></video>
+    <div class="scan-frame"></div>
+    <p id="scanMsg" class="scan-msg">กำลังเปิดกล้อง…</p>
+    <button id="btnScanClose" class="btn-ghost">ปิด</button>
+  </div>
+</div>
+
+<div id="lightbox" class="modal" hidden>
+  <div class="modal-inner">
+    <img id="lightboxImg" alt="">
+    <button id="btnLightboxClose" class="btn-ghost">ปิด</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<input type="file" id="filePicker" accept="image/*" hidden>
+
+<script src="config.js?v=1"></script>
+<script src="api.js?v=1"></script>
+<script src="store.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

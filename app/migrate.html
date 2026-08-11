@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>นำเข้าข้อมูลเก่า — บันทึกงานซ่อม</title>
+<link rel="stylesheet" href="app.css?v=1">
+<style>
+  main{max-width:760px;margin:0 auto;padding:24px 16px 60px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+       padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .box h2{font-size:1rem;color:var(--gold-dk);margin-bottom:10px}
+  .num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+       background:var(--gold);color:#fff;font-size:.8rem;margin-right:8px}
+  .log{font-family:ui-monospace,Consolas,monospace;font-size:.76rem;background:#2c2317;color:#e7dcc4;
+       border-radius:10px;padding:12px;max-height:340px;overflow:auto;white-space:pre-wrap;line-height:1.6}
+  .prog{height:10px;background:var(--bg);border-radius:99px;overflow:hidden;margin:10px 0}
+  .prog i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s}
+  .stat{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-top:10px}
+  .stat div{background:var(--bg);border-radius:9px;padding:9px 4px}
+  .stat b{display:block;font-size:1.05rem}
+  .stat span{font-size:.7rem;color:var(--ink-3)}
+  .warn{background:#fdf6e6;border:1px solid #eddcb8;color:var(--warn);
+        padding:10px 13px;border-radius:10px;font-size:.84rem;margin-bottom:12px}
+</style>
+</head>
+<body>
+<main>
+  <h1 style="font-size:1.25rem;margin-bottom:6px">นำเข้าข้อมูลเก่า</h1>
+  <p class="muted small" style="margin-top:0">งานซ่อม 123 รายการ จากชีท “บันทึกงานซ่อม” พร้อมรูปภาพจาก Google Drive</p>
+
+  <div class="warn">
+    ทำครั้งเดียวพอ — ถ้ารันซ้ำ ข้อมูลจะถูกเขียนทับด้วยค่าเดิม (ไม่เกิดรายการซ้ำ)
+    แต่รูปจะถูกอัปโหลดใหม่ กินโควตาเปล่า ๆ
+  </div>
+
+  <div class="box">
+    <h2><span class="num">1</span>ล็อกอิน</h2>
+    <div class="grid-2">
+      <div class="field"><label for="mUser">ผู้ใช้</label><select id="mUser"></select></div>
+      <div class="field"><label for="mPin">PIN</label><input id="mPin" type="password" inputmode="numeric" placeholder="••••••"></div>
+    </div>
+    <button id="btnLogin" class="btn-primary">เข้าสู่ระบบ</button>
+    <p id="loginMsg" class="hint"></p>
+  </div>
+
+  <div class="box">
+    <h2><span class="num">2</span>เลือกโฟลเดอร์รูป</h2>
+    <p class="hint" style="margin-bottom:10px">
+      โฟลเดอร์ <code>บันทึกงานซ่อม_Images</code> ที่ดาวน์โหลดมาจาก Google Drive
+      (เบราว์เซอร์จะถามยืนยันการอ่านโฟลเดอร์ — ไฟล์ไม่ได้ถูกส่งไปไหนนอกจาก Supabase ของคุณ)
+    </p>
+    <input type="file" id="mFolder" webkitdirectory directory multiple>
+    <p id="folderMsg" class="hint"></p>
+  </div>
+
+  <div class="box">
+    <h2><span class="num">3</span>เริ่มนำเข้า</h2>
+    <label style="display:flex;gap:8px;align-items:center;font-size:.86rem;margin-bottom:12px">
+      <input type="checkbox" id="mSkipPhotos" style="width:auto">
+      ข้ามรูปภาพ นำเข้าเฉพาะข้อมูล (เร็วกว่ามาก ใช้ทดสอบ)
+    </label>
+    <button id="btnRun" class="btn-primary" disabled>เริ่มนำเข้า</button>
+    <div class="prog"><i id="bar"></i></div>
+    <div class="stat">
+      <div><b id="sRows">0</b><span>แถวที่ส่งแล้ว</span></div>
+      <div><b id="sImg">0</b><span>รูปที่อัปแล้ว</span></div>
+      <div><b id="sMiss">0</b><span>รูปที่หาไม่เจอ</span></div>
+      <div><b id="sErr">0</b><span>ผิดพลาด</span></div>
+    </div>
+  </div>
+
+  <div class="box"><h2>บันทึกการทำงาน</h2><div id="log" class="log">รอเริ่ม…</div></div>
+
+  <p class="hint">เสร็จแล้วกลับไปที่ <a href="index.html">หน้าแอป</a></p>
+</main>
+
+<script src="config.js?v=1"></script>
+<script src="api.js?v=1"></script>
+<script src="data/seed.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const SLOTS = {
+  imgDoc: 'ภาพถ่ายใบซ่อม', imgDefect: 'ภาพชำรุด', imgWeightIn: 'ภาพรับ',
+  imgWeightOut: 'ภาพส่ง', imgDone: 'ภาพแก้ไข',
+};
+let files = new Map();        // ชื่อไฟล์ -> File
+let stats = { rows: 0, img: 0, miss: 0, err: 0 };
+
+const log = (m, cls = '') => {
+  const el = $('#log');
+  el.textContent += (el.textContent === 'รอเริ่ม…' ? '' : '\n') + m;
+  if (el.textContent.startsWith('รอเริ่ม…')) el.textContent = el.textContent.replace('รอเริ่ม…\n', '');
+  el.scrollTop = el.scrollHeight;
+};
+const paint = () => {
+  $('#sRows').textContent = stats.rows; $('#sImg').textContent = stats.img;
+  $('#sMiss').textContent = stats.miss; $('#sErr').textContent = stats.err;
+};
+
+/* ── 1. ล็อกอิน ── */
+$('#mUser').innerHTML = CONFIG.USERS.map(u => `<option value="${u.email}">${u.name}</option>`).join('');
+$('#btnLogin').addEventListener('click', async () => {
+  const msg = $('#loginMsg');
+  msg.textContent = 'กำลังเข้าสู่ระบบ…';
+  try {
+    await API.signIn($('#mUser').value, $('#mPin').value);
+    msg.textContent = '✅ เข้าสู่ระบบแล้ว';
+    checkReady();
+  } catch (e) {
+    msg.textContent = '❌ ' + (e.badPin ? 'PIN ไม่ถูกต้อง' : e.message);
+  }
+});
+
+/* ── 2. โฟลเดอร์รูป ── */
+$('#mFolder').addEventListener('change', e => {
+  files = new Map();
+  for (const f of e.target.files) files.set(f.name, f);
+  $('#folderMsg').textContent = `พบไฟล์ ${files.size} ไฟล์`;
+  checkReady();
+});
+
+const checkReady = () => {
+  $('#btnRun').disabled = !API.hasSession();
+};
+
+/* ── ย่อรูป ── */
+function resize(file, maxSide, q) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      c.toBlob(b => b ? res(b) : rej(new Error('ย่อรูปไม่สำเร็จ')), 'image/jpeg', q);
+    };
+    img.onerror = () => rej(new Error('อ่านรูปไม่ได้'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+const toDbRow = j => ({
+  id: j.id, date_in: j.dateIn || null, date_out: j.dateOut || null, status: j.status,
+  doc_no: j.docNo, branch: j.branch, product_type: j.productType, pattern: j.pattern,
+  part: j.part, defect_kind: j.defectKind, defect_spot: j.defectSpot,
+  weight_in: j.weightIn, weight_out: j.weightOut, weight_add: j.weightAdd,
+  method: j.method, technician: j.technician || '', recorded_by: '(นำเข้าจากชีท)',
+  notes: j.notes, photos: j.photos, legacy: true, deleted: false,
+  history: [{ by: '(นำเข้า)', at: new Date().toISOString(), action: 'นำเข้าจากชีทเดิม' }],
+});
+
+/* ── 3. นำเข้า ── */
+$('#btnRun').addEventListener('click', async () => {
+  $('#btnRun').disabled = true;
+  const skipPhotos = $('#mSkipPhotos').checked;
+  const jobs = window.SEED_JOBS;
+  stats = { rows: 0, img: 0, miss: 0, err: 0 }; paint();
+  $('#log').textContent = '';
+  log(`เริ่มนำเข้า ${jobs.length} รายการ` + (skipPhotos ? ' (ข้ามรูป)' : ''));
+
+  const batch = [];
+  for (let i = 0; i < jobs.length; i++) {
+    const j = jobs[i];
+    const photos = {};
+
+    if (!skipPhotos) {
+      for (const slot of Object.keys(SLOTS)) {
+        const fname = j[slot];
+        if (!fname) continue;
+        const file = files.get(fname);
+        if (!file) { photos[slot] = { missing: fname }; stats.miss++; continue; }
+        try {
+          const [view, thumb] = await Promise.all([
+            resize(file, CONFIG.PHOTO_VIEW, .75), resize(file, CONFIG.PHOTO_THUMB, .7),
+          ]);
+          const pv = `${j.id}/${slot}.view.jpg`, pt = `${j.id}/${slot}.thumb.jpg`;
+          await API.uploadPhoto(pv, view);
+          await API.uploadPhoto(pt, thumb);
+          photos[slot] = { view: pv, thumb: pt };
+          stats.img += 2;
+        } catch (e) {
+          stats.err++; log(`  ⚠ ${j.id} ${slot}: ${e.message}`);
+          photos[slot] = { missing: fname };
+        }
+      }
+    } else {
+      for (const slot of Object.keys(SLOTS)) if (j[slot]) photos[slot] = { missing: j[slot] };
+    }
+
+    batch.push(toDbRow({ ...j, photos }));
+
+    if (batch.length >= 20 || i === jobs.length - 1) {
+      try {
+        await API.upsert('jobs', batch.splice(0));
+        stats.rows = i + 1;
+        log(`✔ ส่งแล้วถึง ${j.id}  (${i + 1}/${jobs.length})`);
+      } catch (e) { stats.err++; log(`✖ ส่งชุดล้มเหลว: ${e.message}`); batch.length = 0; }
+    }
+
+    $('#bar').style.width = ((i + 1) / jobs.length * 100) + '%';
+    paint();
+  }
+
+  // ─── สร้างรายการ dropdown จากค่าที่มีจริงในข้อมูลเก่า ───
+  // ถ้าไม่ทำขั้นนี้ ช่องลวดลาย/วิธีซ่อม จะว่างเปล่าทั้งที่ข้อมูลมี 35 ลาย
+  try {
+    const uniq = field => [...new Set(jobs.map(j => (j[field] || '').trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'th'));
+    const merge = (base, extra) => [...new Set([...base, ...extra])].sort((a, b) => a.localeCompare(b, 'th'));
+
+    const listRows = [
+      { name: 'productTypes', values: merge(['MOD-96.50%', 'DDD-75.00%'], uniq('productType')) },
+      { name: 'patterns',     values: uniq('pattern') },
+      { name: 'parts',        values: uniq('part') },
+      { name: 'defectKinds',  values: merge(['ขาด','ดีด','หัก','บุบ','หลุด','แตกลาย','ล็อคไม่แน่น','ด่าง','อื่น ๆ'], uniq('defectKind')) },
+      { name: 'defectSpots',  values: merge(['ระหว่างเส้น','ใกล้หัวจรวด','ใกล้ห่วง','ตะขอ','ทั้งเส้น','หัวจรวด'], uniq('defectSpot')) },
+      { name: 'methods',      values: merge(['เชื่อมไฟ','เชื่อมเลเซอร์','เชื่อมเลเซอร์ + เชื่อมไฟ','หลอม','เป่าไฟ','ผลิตใหม่','ไม่ซ่อม'], uniq('method')) },
+      { name: 'technicians',  values: uniq('technician') },
+    ].map(r => ({ ...r, disabled: [] }));
+
+    await API.upsert('lists', listRows);
+    log(`✔ สร้างรายการตัวเลือก: ` +
+        listRows.map(r => `${r.name} ${r.values.length}`).join(' · '));
+  } catch (e) {
+    stats.err++; log(`✖ สร้างรายการตัวเลือกไม่สำเร็จ: ${e.message}`);
+  }
+
+  log('');
+  log(`เสร็จสิ้น — ${stats.rows} แถว · ${stats.img} รูป · หาไม่เจอ ${stats.miss} · ผิดพลาด ${stats.err}`);
+  if (stats.miss) log('รูปที่หาไม่เจอจะแสดงเป็นชื่อไฟล์ 📁 ในแอป ข้อมูลอื่นครบปกติ');
+  $('#btnRun').disabled = false;
+});
+</script>
+</body>
+</html>

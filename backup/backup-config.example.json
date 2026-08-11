@@ -1,0 +1,12 @@
+{
+  "_อ่านก่อน": "คัดลอกไฟล์นี้เป็น backup-config.json แล้วใส่ค่าจริง — backup-config.json ถูกกันไม่ให้ขึ้น GitHub ไว้แล้ว",
+
+  "supabaseUrl": "https://xxxxxxxxxxxxxxxx.supabase.co",
+  "anonKey": "วาง anon key ที่นี่ (ค่าเดียวกับใน app/config.js)",
+
+  "email": "user1@banthuek.local",
+  "pin": "123456",
+
+  "_outputFolder": "เว้นว่างไว้ = เก็บในโฟลเดอร์ backup\\data เอง หรือระบุที่อื่น เช่น D:\\สำรองงานซ่อม",
+  "outputFolder": ""
+}
