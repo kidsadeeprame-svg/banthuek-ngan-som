@@ -14,8 +14,8 @@
 
 window.CONFIG = {
 
-  SUPABASE_URL:      'https://xxxxxxxxxxxxxxxx.supabase.co',
-  SUPABASE_ANON_KEY: 'วาง anon key ที่นี่',
+  SUPABASE_URL:      'https://owxoorumizncocpocmwi.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_Nf0lHfIyI7L7jywOnWnVCQ_aPV88K6y',
 
   /* ─────────── ผู้ใช้งาน ───────────
      ชื่อ = ที่แสดงบนหน้าล็อกอิน
