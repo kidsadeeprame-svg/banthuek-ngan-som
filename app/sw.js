@@ -5,10 +5,10 @@
    ไม่แคชคำขอไปยัง Supabase เด็ดขาด — ข้อมูลต้องสดเสมอ
    ═══════════════════════════════════════════════════════════ */
 
-const VERSION = 'gsr-v1';
+const VERSION = 'gsr-v2';
 const SHELL = [
-  './', './index.html', './app.css?v=1', './config.js?v=1',
-  './api.js?v=1', './store.js?v=1', './app.js?v=1',
+  './', './index.html', './app.css?v=2', './config.js?v=2',
+  './api.js?v=2', './store.js?v=2', './app.js?v=2',
   './manifest.webmanifest', './icon.svg', './icon-maskable.svg',
 ];
 

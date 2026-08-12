@@ -509,34 +509,95 @@ $('#btnLightboxClose').addEventListener('click', () => { $('#lightbox').hidden =
 
 /* ═════════════ สแกน QR ═════════════ */
 
-let scanStream = null, scanTimer = null;
+let scanStream = null, scanTimer = null, decoder = null;
+
+const loadScript = src => new Promise((res, rej) => {
+  const s = document.createElement('script');
+  s.src = src; s.onload = res; s.onerror = () => rej(new Error('โหลด ' + src + ' ไม่ได้'));
+  document.head.appendChild(s);
+});
+
+/**
+ * Safari บน iPhone ไม่มี BarcodeDetector (WebKit ไม่เคยรองรับ)
+ * จึงต้องมีตัวถอดรหัสสำรองไว้ ไม่งั้นมือถือครึ่งหนึ่งสแกนไม่ได้เลย
+ * โหลด jsQR ตอนกดปุ่มสแกนครั้งแรกเท่านั้น (251 KB) ไม่ถ่วงเวลาเปิดแอป
+ */
+async function getDecoder() {
+  if (decoder) return decoder;
+
+  if ('BarcodeDetector' in window) {
+    const det = new BarcodeDetector({ formats: ['qr_code'] });
+    decoder = {
+      kind: 'native',
+      async read(video) {
+        const codes = await det.detect(video);
+        return codes.length ? codes[0].rawValue : null;
+      },
+    };
+    return decoder;
+  }
+
+  await loadScript('lib/jsQR.js');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  decoder = {
+    kind: 'jsqr',
+    read(video) {
+      const vw = video.videoWidth, vh = video.videoHeight;
+      if (!vw || !vh) return null;
+      // ย่อก่อนถอดรหัส ไม่งั้นอ่านภาพเต็มความละเอียดทุก 300ms จะหน่วงบนมือถือ
+      const scale = Math.min(1, 640 / Math.max(vw, vh));
+      canvas.width = Math.round(vw * scale);
+      canvas.height = Math.round(vh * scale);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+      return code?.data || null;
+    },
+  };
+  return decoder;
+}
+
 $('#btnScan').addEventListener('click', async () => {
   $('#scanner').hidden = false;
   const msg = $('#scanMsg');
-  if (!('BarcodeDetector' in window)) {
-    msg.textContent = 'เบราว์เซอร์นี้สแกน QR ไม่ได้ — กรุณาพิมพ์เลขเอง'; return;
-  }
+  msg.textContent = 'กำลังเตรียมตัวสแกน…';
+
+  let dec;
   try {
-    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-  } catch (err) {
-    msg.textContent = 'เปิดกล้องไม่ได้: ' + err.name + ' — กรุณาพิมพ์เลขเอง'; return;
+    dec = await getDecoder();
+  } catch (e) {
+    msg.textContent = 'โหลดตัวสแกนไม่สำเร็จ — กรุณาพิมพ์เลขเอง';
+    return;
   }
+
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } },
+    });
+  } catch (err) {
+    msg.textContent = err.name === 'NotAllowedError'
+      ? 'ยังไม่ได้อนุญาตให้ใช้กล้อง — เปิดสิทธิ์กล้องในตั้งค่าเบราว์เซอร์ แล้วลองใหม่'
+      : 'เปิดกล้องไม่ได้: ' + err.name + ' — กรุณาพิมพ์เลขเอง';
+    return;
+  }
+
   const video = $('#scanVideo');
   video.srcObject = scanStream;
+  video.setAttribute('playsinline', '');   // iOS จะเปิดวิดีโอเต็มจอถ้าไม่มีบรรทัดนี้
   await video.play();
   msg.textContent = 'เล็ง QR ให้อยู่ในกรอบ';
-  const det = new BarcodeDetector({ formats: ['qr_code'] });
+
   scanTimer = setInterval(async () => {
     try {
-      const codes = await det.detect(video);
-      if (!codes.length) return;
-      const raw = codes[0].rawValue.trim();
+      const raw = await dec.read(video);
+      if (!raw) return;
       closeScanner();
-      $('#fDocNo').value = raw;
+      $('#fDocNo').value = raw.trim();
       $('#fDocNo').dispatchEvent(new Event('input'));
-      toast('สแกนได้: ' + raw);
-    } catch (_) { /* เฟรมนี้อ่านไม่ออก */ }
-  }, 350);
+      toast('สแกนได้: ' + raw.trim());
+    } catch (_) { /* เฟรมนี้อ่านไม่ออก ข้ามไป */ }
+  }, 300);
 });
 function closeScanner() {
   clearInterval(scanTimer); scanTimer = null;
