@@ -246,6 +246,26 @@ main{max-width:820px; margin:0 auto; padding:16px 16px 100px}
 .matrix th:first-child,.matrix td:first-child{text-align:left; position:sticky; left:0; background:var(--card)}
 .matrix th:first-child{background:var(--bg)}
 .matrix td.hot{background:var(--gold-lt); font-weight:700; color:var(--gold-dk)}
+
+/* แถวที่กดเข้าไปดูรายการงานได้ */
+.can-drill{cursor:pointer}
+.bar-row.can-drill:hover .bar-name{color:var(--gold-dk); font-weight:700}
+.bar-row.can-drill:hover .bar-track{outline:2px solid var(--gold); outline-offset:1px}
+.matrix td.can-drill{color:var(--gold-dk); text-decoration:underline; text-underline-offset:3px}
+.matrix td.can-drill:hover{background:var(--gold-lt)}
+
+.drill-chip{
+  display:flex; align-items:center; gap:10px; margin-bottom:12px;
+  padding:9px 12px; border-radius:var(--r);
+  background:var(--gold-lt); border:1.5px solid #e2d3a8;
+  font-size:.84rem; font-weight:700; color:var(--gold-dk);
+}
+.drill-chip span{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.drill-chip button{
+  border:0; background:rgba(0,0,0,.08); color:var(--gold-dk);
+  width:26px; height:26px; border-radius:50%; font-size:.85rem; flex:none;
+}
+.drill-chip button:hover{background:rgba(0,0,0,.16)}
 .matrix tr.total td{font-weight:700; background:var(--bg)}
 
 /* ═══════════ ตั้งค่า ═══════════ */

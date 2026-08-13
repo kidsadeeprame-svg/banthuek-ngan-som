@@ -610,9 +610,25 @@ $('#btnScanClose').addEventListener('click', closeScanner);
 /* ═════════════ รายการ ═════════════ */
 
 let listFilter = { q: '', status: '' };
+let drill = null;          // { label, set } เมื่อกดเข้ามาจากหน้ารายงาน
+
 $('#listSearch').addEventListener('input', e => {
   listFilter.q = e.target.value.trim().toLowerCase(); renderList();
 });
+
+/* กดแถวในรายงาน -> เปิดหน้ารายการที่กรองไว้แล้ว */
+$('#view-report').addEventListener('click', e => {
+  const el = e.target.closest('[data-drill]'); if (!el) return;
+  const d = drillStore[+el.dataset.drill]; if (!d) return;
+  drill = { label: d.label, set: new Set(d.ids) };
+  listFilter = { q: '', status: '' };
+  $('#listSearch').value = '';
+  $$('#statusFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.status === ''));
+  showView('list');
+});
+
+function clearDrill() { drill = null; renderList(); }
+$('#drillClear').addEventListener('click', clearDrill);
 $('#statusFilter').addEventListener('click', e => {
   const b = e.target.closest('[data-status]'); if (!b) return;
   listFilter.status = b.dataset.status;
@@ -623,11 +639,15 @@ $('#statusFilter').addEventListener('click', e => {
 function renderList() {
   const rows = Store.jobs.filter(j => {
     if (j.deleted) return false;
+    if (drill && !drill.set.has(j.id)) return false;
     if (listFilter.status && j.status !== listFilter.status) return false;
     if (!listFilter.q) return true;
     return [j.id, j.docNo, j.pattern, j.branch, j.defectKind, j.defectSpot, j.technician]
       .join(' ').toLowerCase().includes(listFilter.q);
   });
+
+  $('#drillChip').hidden = !drill;
+  if (drill) $('#drillLabel').textContent = `จากรายงาน: ${drill.label}`;
   $('#listCount').textContent = `${rows.length} รายการ`;
   $('#jobList').innerHTML = rows.length ? rows.map(j => {
     const d = lossOf(j);
@@ -665,21 +685,34 @@ function reportRows() {
   });
 }
 
+/* เก็บรายชื่องานของแต่ละแถวในรายงานไว้ เพื่อให้กดแล้วเปิดดูรายการงานจริงได้
+   เก็บ id ตรง ๆ ตอนสร้างรายงาน ไม่คำนวณเงื่อนไขซ้ำตอนกด
+   รายการที่เห็นจึงตรงกับตัวเลขที่นับไว้เสมอ ไม่มีทางเพี้ยน */
+let drillStore = [];
+
 function bars(entries, opts = {}) {
   if (!entries.length) return `<p class="empty">ไม่มีข้อมูลในช่วงที่เลือก</p>`;
   const max = Math.max(...entries.map(e => Math.abs(e[1]))) || 1;
-  return entries.map(([name, v]) => `
-    <div class="bar-row">
+  return entries.map(([name, v, ids]) => {
+    const i = ids ? drillStore.push({ label: `${opts.title || ''} ${name}`.trim(), ids }) - 1 : -1;
+    return `<div class="bar-row${i >= 0 ? ' can-drill' : ''}"${i >= 0 ? ` data-drill="${i}"` : ''}>
       <span class="bar-name" title="${esc(name)}">${esc(name)}</span>
       <span class="bar-track"><span class="bar-fill ${opts.loss ? 'loss' : ''}"
         style="width:${(Math.abs(v) / max * 100).toFixed(1)}%"></span></span>
       <span class="bar-val">${opts.fmt ? opts.fmt(v) : v}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+
+/** คืน [ชื่อ, จำนวน, รายชื่อ id] เรียงจากมากไปน้อย */
 const tally = (rows, keyFn) => {
   const m = new Map();
-  rows.forEach(r => { const k = keyFn(r); if (k) m.set(k, (m.get(k) || 0) + 1); });
-  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  rows.forEach(r => {
+    const k = keyFn(r); if (!k) return;
+    const e = m.get(k) || { n: 0, ids: [] };
+    e.n++; e.ids.push(r.id); m.set(k, e);
+  });
+  return [...m.entries()].map(([name, e]) => [name, e.n, e.ids]).sort((a, b) => b[1] - a[1]);
 };
 
 function renderReport() {
@@ -691,26 +724,32 @@ function renderReport() {
   keep($('#rBranch'), [...new Set(Store.jobs.map(j => j.branch).filter(Boolean))].sort(), 'ทุกสาขา');
   keep($('#rTech'),   [...new Set(Store.jobs.map(j => j.technician || '(ไม่ระบุ)'))].sort(), 'ทุกช่าง');
   syncBE();
+  drillStore = [];
 
   const rows = reportRows();
-  $('#reportScope').textContent = `${rows.length} งาน ในเงื่อนไขที่เลือก`;
+  $('#reportScope').textContent = `${rows.length} งาน ในเงื่อนไขที่เลือก · กดที่แถวใดก็ได้เพื่อดูรายการงาน`;
 
   /* 1 · อาการชำรุด */
   $('#repDefects').innerHTML = bars(
-    tally(rows, r => [r.defectKind, r.defectSpot].filter(Boolean).join(' ')).slice(0, 10));
+    tally(rows, r => [r.defectKind, r.defectSpot].filter(Boolean).join(' ')).slice(0, 10),
+    { title: 'อาการ' });
 
   const topPatterns = tally(rows, r => r.pattern).slice(0, 8).map(e => e[0]);
   const topKinds    = tally(rows, r => r.defectKind).slice(0, 5).map(e => e[0]);
   if (topPatterns.length && topKinds.length) {
-    const cell = (p, k) => rows.filter(r => r.pattern === p && r.defectKind === k).length;
-    const maxCell = Math.max(...topPatterns.flatMap(p => topKinds.map(k => cell(p, k))));
+    const cellRows = (p, k) => rows.filter(r => r.pattern === p && r.defectKind === k);
+    const maxCell = Math.max(...topPatterns.flatMap(p => topKinds.map(k => cellRows(p, k).length)));
     $('#repMatrix').innerHTML =
       `<thead><tr><th>ลวดลาย</th>${topKinds.map(k => `<th>${esc(k)}</th>`).join('')}<th>รวม</th></tr></thead>
        <tbody>${topPatterns.map(p => {
-         const cs = topKinds.map(k => cell(p, k));
-         return `<tr><td>${esc(p)}</td>${cs.map(c =>
-           `<td class="${c && c === maxCell ? 'hot' : ''}">${c || '·'}</td>`).join('')}
-           <td><b>${cs.reduce((a, b) => a + b, 0)}</b></td></tr>`;
+         const cells = topKinds.map(k => {
+           const rs = cellRows(p, k);
+           if (!rs.length) return `<td>·</td>`;
+           const i = drillStore.push({ label: `${p} · ${k}`, ids: rs.map(r => r.id) }) - 1;
+           return `<td class="can-drill ${rs.length === maxCell ? 'hot' : ''}" data-drill="${i}">${rs.length}</td>`;
+         });
+         const total = topKinds.reduce((a, k) => a + cellRows(p, k).length, 0);
+         return `<tr><td>${esc(p)}</td>${cells.join('')}<td><b>${total}</b></td></tr>`;
        }).join('')}</tbody>`;
   } else $('#repMatrix').innerHTML = `<tbody><tr><td>ไม่มีข้อมูล</td></tr></tbody>`;
 
@@ -727,29 +766,40 @@ function renderReport() {
     const m = new Map();
     withLoss.forEach(({ r, d }) => {
       const k = keyFn(r); if (!k) return;
-      m.set(k, +((m.get(k) || 0) + Math.max(0, d)).toFixed(3));
+      const e = m.get(k) || { v: 0, ids: [] };
+      e.v = +(e.v + Math.max(0, d)).toFixed(3); e.ids.push(r.id); m.set(k, e);
     });
-    return [...m.entries()].filter(e => e[1] > 0);
+    return [...m.entries()].map(([name, e]) => [name, e.v, e.ids]).filter(x => x[1] > 0);
   };
   const g = v => v.toFixed(2);
+  // เรียงตามปีก่อนเดือน ไม่งั้น 10/2568 จะมาอยู่หลัง 08/2569
+  const monthKey = r => r.dateIn ? `${r.dateIn.slice(5, 7)}/${Number(r.dateIn.slice(0, 4)) + 543}` : '';
+  const monthSort = s => { const [m, y] = s.split('/'); return y + m; };
   $('#repLossMonth').innerHTML = bars(
-    sumBy(r => r.dateIn ? `${r.dateIn.slice(5, 7)}/${Number(r.dateIn.slice(0, 4)) + 543}` : '')
-      .sort((a, b) => a[0].localeCompare(b[0])), { loss: true, fmt: g });
+    sumBy(monthKey).sort((a, b) => monthSort(a[0]).localeCompare(monthSort(b[0]))),
+    { loss: true, fmt: g, title: 'เดือน' });
   $('#repLossMethod').innerHTML = bars(
-    sumBy(r => r.method || '(ไม่ระบุ)').sort((a, b) => b[1] - a[1]), { loss: true, fmt: g });
+    sumBy(r => r.method || '(ไม่ระบุ)').sort((a, b) => b[1] - a[1]),
+    { loss: true, fmt: g, title: 'วิธีซ่อม' });
 
   /* 3 · รายช่าง */
   const techs = [...new Set(rows.map(r => r.technician || '(ไม่ระบุ)'))].sort();
   $('#repTech').innerHTML =
     `<thead><tr><th>ช่าง</th><th>รับงาน</th><th>เสร็จสิ้น</th><th>ไม่ซ่อม</th>
-      <th>อัตรา Reject</th><th>ทองหาย (ก.)</th></tr></thead>
+      <th>อัตรา Reject</th><th>ซิ (ก.)</th></tr></thead>
      <tbody>${techs.map(t => {
        const mine = rows.filter(r => (r.technician || '(ไม่ระบุ)') === t);
-       const done = mine.filter(r => r.status === 'เสร็จสิ้น').length;
-       const rej  = mine.filter(r => r.status === 'ไม่ซ่อม').length;
+       const done = mine.filter(r => r.status === 'เสร็จสิ้น');
+       const rej  = mine.filter(r => r.status === 'ไม่ซ่อม');
        const loss = mine.reduce((a, r) => a + Math.max(0, lossOf(r) ?? 0), 0);
-       const rate = mine.length ? rej / mine.length * 100 : 0;
-       return `<tr><td>${esc(t)}</td><td>${mine.length}</td><td>${done}</td><td>${rej}</td>
+       const rate = mine.length ? rej.length / mine.length * 100 : 0;
+       const cell = (list, text) => {
+         if (!list.length) return `<td>${text}</td>`;
+         const i = drillStore.push({ label: `ช่าง ${t}`, ids: list.map(r => r.id) }) - 1;
+         return `<td class="can-drill" data-drill="${i}">${text}</td>`;
+       };
+       return `<tr><td>${esc(t)}</td>
+         ${cell(mine, mine.length)}${cell(done, done.length)}${cell(rej, rej.length)}
          <td${rate > 5 ? ' style="color:var(--bad);font-weight:700"' : ''}>${rate.toFixed(1)}%</td>
          <td>${loss.toFixed(2)}</td></tr>`;
      }).join('')}</tbody>`;

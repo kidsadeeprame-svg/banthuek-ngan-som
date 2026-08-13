@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
-<link rel="stylesheet" href="app.css?v=4">
+<link rel="stylesheet" href="app.css?v=5">
 </head>
 <body>
 
@@ -190,6 +190,10 @@
     <!-- ─────────── หน้ารายการ ─────────── -->
     <section id="view-list" class="view" hidden>
       <div class="view-head"><h2>รายการงานซ่อม</h2></div>
+      <div id="drillChip" class="drill-chip" hidden>
+        <span id="drillLabel"></span>
+        <button id="drillClear" title="ล้างตัวกรอง">✕</button>
+      </div>
       <div class="field">
         <input id="listSearch" type="search" placeholder="ค้นหา เลขงาน / ใบซ่อม / ลวดลาย / สาขา">
       </div>
@@ -318,9 +322,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=4"></script>
-<script src="api.js?v=4"></script>
-<script src="store.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="api.js?v=5"></script>
+<script src="store.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
