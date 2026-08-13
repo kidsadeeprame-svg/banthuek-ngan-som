@@ -301,6 +301,16 @@ if ($DataOnly -or -not $ImageFolder) {
 # ═══════════════════════════════════════════════════════════
 if (-not (Test-Path $ImageFolder)) { Say "ไม่พบโฟลเดอร์รูป: $ImageFolder" 'Red'; exit 1 }
 Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Net.Http
+
+# ต้องใช้ HttpClient ส่งรูป ห้ามใช้ Invoke-WebRequest/-RestMethod กับ -Body ที่เป็น byte[]
+# PowerShell 5.1 จะแปลงไบต์ที่ไม่ใช่ตัวอักษรเป็น U+FFFD ทีละ 3 ไบต์
+# ไฟล์พองจาก 41 KB เป็น 145 KB และเปิดไม่ได้เลย (ทดสอบยืนยันแล้ว)
+$http = New-Object System.Net.Http.HttpClient
+$http.Timeout = [TimeSpan]::FromSeconds(120)
+$http.DefaultRequestHeaders.Add('apikey', $cfg.anonKey)
+$http.DefaultRequestHeaders.Add('Authorization', "Bearer $($auth.access_token)")
+$http.DefaultRequestHeaders.Add('x-upsert', 'true')
 
 Say "อ่านรายชื่อไฟล์รูป…"
 $fileMap = @{}
@@ -349,8 +359,13 @@ foreach ($j in $jobs) {
     $path = "$($j.id)/$slot.thumb.jpg"
     try {
       $bytes = MakeThumb $full 400
-      Invoke-RestMethod -Method Post -Uri "$($cfg.supabaseUrl)/storage/v1/object/$([uri]::EscapeUriString("photos/$path"))" `
-        -Headers ($H + @{ 'Content-Type'='image/jpeg'; 'x-upsert'='true' }) -Body $bytes | Out-Null
+      $content = New-Object System.Net.Http.ByteArrayContent(, $bytes)
+      $content.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue('image/jpeg')
+      $resp = $http.PostAsync(
+        "$($cfg.supabaseUrl)/storage/v1/object/$([uri]::EscapeUriString("photos/$path"))", $content).Result
+      $content.Dispose()
+      if (-not $resp.IsSuccessStatusCode) { throw "HTTP $([int]$resp.StatusCode)" }
+      $resp.Dispose()
       $photos[$slot] = @{ thumb = $path }
       $nUp++
     } catch {
