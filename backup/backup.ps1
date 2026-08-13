@@ -50,17 +50,17 @@ $H = @{ apikey = $cfg.anonKey; Authorization = "Bearer $($auth.access_token)" }
 Say "ล็อกอินสำเร็จ ($($cfg.email))" 'Green'
 
 # ─────────── 2. ดึงข้อมูลงานซ่อม ───────────
+# แบ่งหน้าด้วย limit/offset ของ PostgREST ไม่ใช้ HTTP header Range
+# เพราะ PowerShell 5.1 ห้ามตั้ง Range ผ่าน -Headers (โยน error ทันที)
 $jobs = @()
-$page = 0
+$size = 1000
+$offset = 0
 do {
-  $from = $page * 1000
-  $to   = $from + 999
-  $chunk = Invoke-RestMethod -Method Get `
-    -Uri "$($cfg.supabaseUrl)/rest/v1/jobs?select=*&order=id.asc" `
-    -Headers ($H + @{ Range = "$from-$to" })
+  $chunk = @(Invoke-RestMethod -Method Get -Headers $H `
+    -Uri "$($cfg.supabaseUrl)/rest/v1/jobs?select=*&order=id.asc&limit=$size&offset=$offset")
   $jobs += $chunk
-  $page++
-} while ($chunk.Count -eq 1000)
+  $offset += $size
+} while ($chunk.Count -eq $size)
 
 Say "ดึงข้อมูลได้ $($jobs.Count) รายการ" 'Green'
 if ($jobs.Count -eq 0) { Say "ไม่มีข้อมูล — จบการทำงาน" 'Yellow'; exit 0 }

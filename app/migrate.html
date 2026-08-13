@@ -208,7 +208,20 @@ $('#btnRun').addEventListener('click', async () => {
   try {
     const uniq = field => [...new Set(jobs.map(j => (j[field] || '').trim()).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b, 'th'));
-    const merge = (base, extra) => [...new Set([...base, ...extra])].sort((a, b) => a.localeCompare(b, 'th'));
+    const merge = (...lists) =>
+      [...new Set(lists.flat().filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
+
+    // ต้องดึงของเดิมในระบบมารวมด้วย ไม่งั้นช่างและลวดลายที่เพิ่มไว้เองจะหายหมด
+    // (ข้อมูลเก่าจากชีทไม่มีคอลัมน์ช่างเลย ถ้าเขียนทับตรง ๆ รายชื่อช่างจะกลายเป็นว่าง)
+    const existing = {};
+    try {
+      (await API.select('lists', 'select=*')).forEach(r => {
+        existing[r.name] = { values: r.values || [], disabled: r.disabled || [] };
+      });
+      log(`  พบรายการเดิมในระบบ ${Object.keys(existing).length} ชุด จะรวมเข้าด้วยกัน`);
+    } catch (e) {
+      log(`  อ่านรายการเดิมไม่ได้ (${e.message}) — จะสร้างใหม่`);
+    }
 
     const listRows = [
       { name: 'productTypes', values: merge(['MOD-96.50%', 'DDD-75.00%'], uniq('productType')) },
@@ -218,7 +231,11 @@ $('#btnRun').addEventListener('click', async () => {
       { name: 'defectSpots',  values: merge(['ระหว่างเส้น','ใกล้หัวจรวด','ใกล้ห่วง','ตะขอ','ทั้งเส้น','หัวจรวด'], uniq('defectSpot')) },
       { name: 'methods',      values: merge(['เชื่อมไฟ','เชื่อมเลเซอร์','เชื่อมเลเซอร์ + เชื่อมไฟ','หลอม','เป่าไฟ','ผลิตใหม่','ไม่ซ่อม'], uniq('method')) },
       { name: 'technicians',  values: uniq('technician') },
-    ].map(r => ({ ...r, disabled: [] }));
+    ].map(r => ({
+      name: r.name,
+      values: merge(existing[r.name]?.values, r.values),
+      disabled: existing[r.name]?.disabled || [],
+    }));
 
     await API.upsert('lists', listRows);
     log(`✔ สร้างรายการตัวเลือก: ` +
