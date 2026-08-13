@@ -34,12 +34,18 @@ create table if not exists public.jobs (
 
 -- ส่วนต่างน้ำหนัก: (รับ + เติม) − ส่ง  ค่าบวก = ทองหาย
 -- คำนวณในฐานข้อมูลเพื่อให้รายงานเชื่อถือได้ ไม่ต้องหวังพึ่งฝั่งแอป
+--
+-- ต้องเป็นค่าว่างเมื่อยังชั่งไม่ครบ 2 ครั้ง ห้ามใช้ coalesce(...,0)
+-- ไม่งั้นงานที่ยังไม่ปิดจะถูกนับว่า "ทองหายเท่ากับน้ำหนักทั้งชิ้น"
 alter table public.jobs
   drop column if exists weight_loss;
 alter table public.jobs
   add column weight_loss numeric(10,3)
   generated always as (
-    coalesce(weight_in, 0) + coalesce(weight_add, 0) - coalesce(weight_out, 0)
+    case
+      when weight_in is null or weight_out is null then null
+      else weight_in + coalesce(weight_add, 0) - weight_out
+    end
   ) stored;
 
 create index if not exists jobs_date_in_idx     on public.jobs (date_in desc);

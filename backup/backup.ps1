@@ -52,12 +52,23 @@ Say "ล็อกอินสำเร็จ ($($cfg.email))" 'Green'
 # ─────────── 2. ดึงข้อมูลงานซ่อม ───────────
 # แบ่งหน้าด้วย limit/offset ของ PostgREST ไม่ใช้ HTTP header Range
 # เพราะ PowerShell 5.1 ห้ามตั้ง Range ผ่าน -Headers (โยน error ทันที)
+# ใช้ Invoke-WebRequest + ConvertFrom-Json ไม่ใช้ Invoke-RestMethod
+# เพราะ PS 5.1 ส่ง JSON array กลับมาเป็นก้อนเดียว ไม่แตกเป็นรายการ
+# ทำให้ $jobs มีสมาชิกเดียวที่ข้างในเป็น array ทั้งก้อน แล้วพังตอนหยิบ .id
 $jobs = @()
 $size = 1000
 $offset = 0
 do {
-  $chunk = @(Invoke-RestMethod -Method Get -Headers $H `
-    -Uri "$($cfg.supabaseUrl)/rest/v1/jobs?select=*&order=id.asc&limit=$size&offset=$offset")
+  $res = Invoke-WebRequest -Method Get -Headers $H -UseBasicParsing `
+    -Uri "$($cfg.supabaseUrl)/rest/v1/jobs?select=*&order=id.asc&limit=$size&offset=$offset"
+
+  # ห้ามครอบ @() รอบไปป์ไลน์ตรงนี้ — PS 5.1 นับ array ที่ไหลมาทางไปป์ไลน์เป็นวัตถุชิ้นเดียว
+  # จะได้ array ซ้อน array แล้วพังตอนหยิบ .id ทีหลัง
+  $data = $res.Content | ConvertFrom-Json
+  if     ($null -eq $data)            { $chunk = @() }
+  elseif ($data -is [System.Array])   { $chunk = $data }
+  else                                { $chunk = @($data) }
+
   $jobs += $chunk
   $offset += $size
 } while ($chunk.Count -eq $size)
