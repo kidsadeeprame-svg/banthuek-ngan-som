@@ -99,11 +99,25 @@ const Store = (() => {
 
   /* ─────────── ดึงจาก cloud ─────────── */
 
+  const PAGE = 1000;   // Supabase คืนสูงสุด 1000 แถวต่อคำขอ ขอมากกว่านี้ก็ได้เท่านี้
+
   async function pull() {
     const since = (await get('kv', 'lastSync')) || '1970-01-01T00:00:00Z';
 
-    const rows = await API.select('jobs',
-      `select=*&updated_at=gt.${encodeURIComponent(since)}&order=updated_at.asc&limit=2000`);
+    // ต้องวนหน้า และต้องใช้ gte ไม่ใช่ gt
+    // แถวที่นำเข้ามาพร้อมกันเป็นชุดมี updated_at เท่ากันเป๊ะ ถ้าใช้ gt
+    // จะข้ามแถวที่เหลือในชุดเดียวกันหายไปเงียบ ๆ
+    // ดึงซ้ำไม่เสียหาย เพราะเขียนลง IndexedDB ด้วย id เป็นกุญแจอยู่แล้ว
+    const rows = [];
+    let offset = 0, page;
+    do {
+      page = await API.select('jobs',
+        `select=*&updated_at=gte.${encodeURIComponent(since)}` +
+        `&order=updated_at.asc,id.asc&limit=${PAGE}&offset=${offset}`);
+      rows.push(...page);
+      offset += PAGE;
+    } while (page.length === PAGE);
+
     if (rows.length) {
       const d = await open();
       await new Promise((res, rej) => {
