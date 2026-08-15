@@ -32,7 +32,11 @@ let lists = {}, disabled = {};
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad = (n, w = 4) => String(n).padStart(w, '0');
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/* ต้องอ่านวันที่จากเวลาเครื่อง ห้ามใช้ toISOString()
+   toISOString แปลงเป็นเวลาสากลซึ่งช้ากว่าไทย 7 ชั่วโมง
+   บันทึกงานก่อน 07:00 จะได้วันที่เป็นเมื่อวาน */
+const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1, 2)}-${pad(d.getDate(), 2)}`;
+const todayISO = () => isoOf(new Date());
 
 function thaiDate(iso) {
   if (!iso) return '—';
@@ -609,8 +613,49 @@ $('#btnScanClose').addEventListener('click', closeScanner);
 
 /* ═════════════ รายการ ═════════════ */
 
-let listFilter = { q: '', status: '' };
+let listFilter = { q: '', status: '', from: '', to: '' };
 let drill = null;          // { label, set } เมื่อกดเข้ามาจากหน้ารายงาน
+
+/* ─── กรองตามช่วงวันที่ ─── */
+$('#dateFilter').addEventListener('click', e => {
+  const b = e.target.closest('[data-range]'); if (!b) return;
+  const kind = b.dataset.range;
+  $$('#dateFilter .pill').forEach(p => p.classList.toggle('is-on', p === b));
+
+  if (kind === 'custom') {
+    $('#dateCustom').hidden = false;
+    applyCustomRange();
+    return;
+  }
+  $('#dateCustom').hidden = true;
+
+  const now = new Date();
+  let from = '', to = '';
+  if (kind === '7' || kind === '30') {
+    const d = new Date(now); d.setDate(d.getDate() - (Number(kind) - 1));
+    from = isoOf(d); to = isoOf(now);
+  } else if (kind === 'month') {
+    from = isoOf(new Date(now.getFullYear(), now.getMonth(), 1));
+    to   = isoOf(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  } else if (kind === 'lastmonth') {
+    from = isoOf(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    to   = isoOf(new Date(now.getFullYear(), now.getMonth(), 0));
+  }
+  listFilter.from = from; listFilter.to = to;
+  $('#lFrom').value = from; $('#lTo').value = to;
+  syncBE(); renderList();
+});
+
+function applyCustomRange() {
+  listFilter.from = $('#lFrom').value;
+  listFilter.to   = $('#lTo').value;
+  syncBE(); renderList();
+}
+['#lFrom', '#lTo'].forEach(s => $(s).addEventListener('change', () => {
+  $$('#dateFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.range === 'custom'));
+  $('#dateCustom').hidden = false;
+  applyCustomRange();
+}));
 
 $('#listSearch').addEventListener('input', e => {
   listFilter.q = e.target.value.trim().toLowerCase(); renderList();
@@ -621,9 +666,12 @@ $('#view-report').addEventListener('click', e => {
   const el = e.target.closest('[data-drill]'); if (!el) return;
   const d = drillStore[+el.dataset.drill]; if (!d) return;
   drill = { label: d.label, set: new Set(d.ids) };
-  listFilter = { q: '', status: '' };
+  // ล้างตัวกรองอื่นทั้งหมด ไม่งั้นจำนวนที่เห็นจะไม่ตรงกับตัวเลขที่กดมา
+  listFilter = { q: '', status: '', from: '', to: '' };
   $('#listSearch').value = '';
+  $('#lFrom').value = ''; $('#lTo').value = ''; $('#dateCustom').hidden = true;
   $$('#statusFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.status === ''));
+  $$('#dateFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.range === ''));
   showView('list');
 });
 
@@ -641,6 +689,9 @@ function renderList() {
     if (j.deleted) return false;
     if (drill && !drill.set.has(j.id)) return false;
     if (listFilter.status && j.status !== listFilter.status) return false;
+    // งานที่ไม่มีวันที่รับงานจะไม่เข้าเงื่อนไขช่วงวันที่ใด ๆ
+    if (listFilter.from && (!j.dateIn || j.dateIn < listFilter.from)) return false;
+    if (listFilter.to   && (!j.dateIn || j.dateIn > listFilter.to))   return false;
     if (!listFilter.q) return true;
     return [j.id, j.docNo, j.pattern, j.branch, j.defectKind, j.defectSpot, j.technician]
       .join(' ').toLowerCase().includes(listFilter.q);
@@ -648,7 +699,10 @@ function renderList() {
 
   $('#drillChip').hidden = !drill;
   if (drill) $('#drillLabel').textContent = `จากรายงาน: ${drill.label}`;
-  $('#listCount').textContent = `${rows.length} รายการ`;
+
+  const range = listFilter.from || listFilter.to
+    ? ` · ${thaiDate(listFilter.from)} – ${thaiDate(listFilter.to)}` : '';
+  $('#listCount').textContent = `${rows.length} รายการ${range}`;
   $('#jobList').innerHTML = rows.length ? rows.map(j => {
     const d = lossOf(j);
     return `<div class="job-card" data-id="${esc(j.id)}">

@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
-<link rel="stylesheet" href="app.css?v=5">
+<link rel="stylesheet" href="app.css?v=6">
 </head>
 <body>
 
@@ -204,6 +204,27 @@
         <button class="pill" data-status="เสร็จสิ้น">เสร็จสิ้น</button>
         <button class="pill" data-status="ไม่ซ่อม">ไม่ซ่อม</button>
       </div>
+
+      <div class="filter-row" id="dateFilter">
+        <button class="pill is-on" data-range="">ทุกวัน</button>
+        <button class="pill" data-range="7">7 วัน</button>
+        <button class="pill" data-range="30">30 วัน</button>
+        <button class="pill" data-range="month">เดือนนี้</button>
+        <button class="pill" data-range="lastmonth">เดือนที่แล้ว</button>
+        <button class="pill" data-range="custom">กำหนดเอง ▾</button>
+      </div>
+
+      <div id="dateCustom" class="grid-2" hidden>
+        <div class="field">
+          <label for="lFrom">ตั้งแต่ <span class="be" data-be="lFrom"></span></label>
+          <input id="lFrom" type="date">
+        </div>
+        <div class="field">
+          <label for="lTo">ถึง <span class="be" data-be="lTo"></span></label>
+          <input id="lTo" type="date">
+        </div>
+      </div>
+
       <p id="listCount" class="muted small"></p>
       <div id="jobList" class="job-list"></div>
     </section>
@@ -322,9 +343,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=5"></script>
-<script src="api.js?v=5"></script>
-<script src="store.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="config.js?v=6"></script>
+<script src="api.js?v=6"></script>
+<script src="store.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
