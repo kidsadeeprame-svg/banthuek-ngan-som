@@ -685,7 +685,10 @@ function renderList() {
   if (drill) $('#drillLabel').textContent = `จากรายงาน: ${drill.label}`;
 
   const bits = [];
-  if (listFilter.from || listFilter.to) bits.push(`${thaiDate(listFilter.from)} – ${thaiDate(listFilter.to)}`);
+  const { from, to } = listFilter;
+  if (from && to)      bits.push(`${thaiDate(from)} – ${thaiDate(to)}`);
+  else if (from)       bits.push(`ตั้งแต่ ${thaiDate(from)}`);
+  else if (to)         bits.push(`ถึง ${thaiDate(to)}`);
   if (listFilter.tech) bits.push(listFilter.tech);
   $('#listCount').textContent = `${rows.length} รายการ` + (bits.length ? ` · ${bits.join(' · ')}` : '');
   $('#btnClearFilter').hidden =
