@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
-<link rel="stylesheet" href="app.css?v=8">
+<link rel="stylesheet" href="app.css?v=9">
 </head>
 <body>
 
@@ -91,7 +91,11 @@
           <label for="fDocNo">เลขที่ใบส่งซ่อม <i class="req">*</i></label>
           <div class="input-row">
             <input id="fDocNo" type="text" placeholder="ARSM1-FIX2511-00005" autocomplete="off">
-            <button id="btnScan" class="btn-icon" title="สแกน QR">⛶</button>
+            <button id="btnScan" class="btn-icon" title="สแกน QR" aria-label="สแกน QR">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"/>
+                <path d="M7 12h10"/></svg>
+            </button>
           </div>
           <p class="hint" id="branchHint"></p>
         </div>
@@ -315,11 +319,23 @@
     </section>
   </main>
 
+  <!-- ไอคอนเป็น SVG ไม่ใช่ตัวอักษรพิเศษ
+       เพราะ iOS แปลงสัญลักษณ์อย่าง ✎ ⚙ เป็นอิโมจิสี ทำให้แถบเมนูดูไม่เข้าชุดกัน -->
   <nav class="tabbar">
-    <button class="tab is-on" data-view="form"><span>✎</span>บันทึก</button>
-    <button class="tab" data-view="list"><span>☰</span>รายการ</button>
-    <button class="tab" data-view="report"><span>▤</span>รายงาน</button>
-    <button class="tab" data-view="settings"><span>⚙</span>ตั้งค่า</button>
+    <button class="tab is-on" data-view="form">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>บันทึก</button>
+    <button class="tab" data-view="list">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></span>รายการ</button>
+    <button class="tab" data-view="report">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 20h18"/><rect x="5" y="11" width="3.4" height="6" rx="1"/>
+        <rect x="10.3" y="6" width="3.4" height="11" rx="1"/><rect x="15.6" y="13" width="3.4" height="4" rx="1"/></svg></span>รายงาน</button>
+    <button class="tab" data-view="settings">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3.2"/>
+        <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.11a1.6 1.6 0 0 0-1.05-1.46 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.11a1.6 1.6 0 0 0 1.46-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H9a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.11a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.11a1.6 1.6 0 0 0-1.47 1Z"/></svg></span>ตั้งค่า</button>
   </nav>
 </div>
 
@@ -342,9 +358,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=8"></script>
-<script src="api.js?v=8"></script>
-<script src="store.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="config.js?v=9"></script>
+<script src="api.js?v=9"></script>
+<script src="store.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
