@@ -613,49 +613,28 @@ $('#btnScanClose').addEventListener('click', closeScanner);
 
 /* ═════════════ รายการ ═════════════ */
 
-let listFilter = { q: '', status: '', from: '', to: '' };
+let listFilter = { q: '', status: '', from: '', to: '', tech: '' };
 let drill = null;          // { label, set } เมื่อกดเข้ามาจากหน้ารายงาน
 
-/* ─── กรองตามช่วงวันที่ ─── */
-$('#dateFilter').addEventListener('click', e => {
-  const b = e.target.closest('[data-range]'); if (!b) return;
-  const kind = b.dataset.range;
-  $$('#dateFilter .pill').forEach(p => p.classList.toggle('is-on', p === b));
-
-  if (kind === 'custom') {
-    $('#dateCustom').hidden = false;
-    applyCustomRange();
-    return;
-  }
-  $('#dateCustom').hidden = true;
-
-  const now = new Date();
-  let from = '', to = '';
-  if (kind === '7' || kind === '30') {
-    const d = new Date(now); d.setDate(d.getDate() - (Number(kind) - 1));
-    from = isoOf(d); to = isoOf(now);
-  } else if (kind === 'month') {
-    from = isoOf(new Date(now.getFullYear(), now.getMonth(), 1));
-    to   = isoOf(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-  } else if (kind === 'lastmonth') {
-    from = isoOf(new Date(now.getFullYear(), now.getMonth() - 1, 1));
-    to   = isoOf(new Date(now.getFullYear(), now.getMonth(), 0));
-  }
-  listFilter.from = from; listFilter.to = to;
-  $('#lFrom').value = from; $('#lTo').value = to;
-  syncBE(); renderList();
-});
-
-function applyCustomRange() {
+['#lFrom', '#lTo'].forEach(s => $(s).addEventListener('change', () => {
   listFilter.from = $('#lFrom').value;
   listFilter.to   = $('#lTo').value;
   syncBE(); renderList();
-}
-['#lFrom', '#lTo'].forEach(s => $(s).addEventListener('change', () => {
-  $$('#dateFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.range === 'custom'));
-  $('#dateCustom').hidden = false;
-  applyCustomRange();
 }));
+
+$('#lTech').addEventListener('change', e => {
+  listFilter.tech = e.target.value; renderList();
+});
+
+function clearFilters() {
+  listFilter = { q: '', status: '', from: '', to: '', tech: '' };
+  drill = null;
+  $('#listSearch').value = '';
+  $('#lFrom').value = ''; $('#lTo').value = ''; $('#lTech').value = '';
+  $$('#statusFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.status === ''));
+  syncBE(); renderList();
+}
+$('#btnClearFilter').addEventListener('click', clearFilters);
 
 $('#listSearch').addEventListener('input', e => {
   listFilter.q = e.target.value.trim().toLowerCase(); renderList();
@@ -665,13 +644,9 @@ $('#listSearch').addEventListener('input', e => {
 $('#view-report').addEventListener('click', e => {
   const el = e.target.closest('[data-drill]'); if (!el) return;
   const d = drillStore[+el.dataset.drill]; if (!d) return;
+  // ล้างตัวกรองอื่นทั้งหมดก่อน ไม่งั้นจำนวนที่เห็นจะไม่ตรงกับตัวเลขที่กดมา
+  clearFilters();
   drill = { label: d.label, set: new Set(d.ids) };
-  // ล้างตัวกรองอื่นทั้งหมด ไม่งั้นจำนวนที่เห็นจะไม่ตรงกับตัวเลขที่กดมา
-  listFilter = { q: '', status: '', from: '', to: '' };
-  $('#listSearch').value = '';
-  $('#lFrom').value = ''; $('#lTo').value = ''; $('#dateCustom').hidden = true;
-  $$('#statusFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.status === ''));
-  $$('#dateFilter .pill').forEach(p => p.classList.toggle('is-on', p.dataset.range === ''));
   showView('list');
 });
 
@@ -685,10 +660,19 @@ $('#statusFilter').addEventListener('click', e => {
 });
 
 function renderList() {
+  // เติมรายชื่อช่างจากงานที่มีจริง คงค่าที่เลือกไว้
+  const techs = [...new Set(Store.jobs.filter(j => !j.deleted)
+    .map(j => j.technician).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
+  const cur = listFilter.tech;
+  $('#lTech').innerHTML = `<option value="">ทุกช่าง</option>` +
+    techs.map(t => `<option${t === cur ? ' selected' : ''}>${esc(t)}</option>`).join('') +
+    `<option value="(ไม่ระบุ)"${cur === '(ไม่ระบุ)' ? ' selected' : ''}>(ยังไม่ระบุช่าง)</option>`;
+
   const rows = Store.jobs.filter(j => {
     if (j.deleted) return false;
     if (drill && !drill.set.has(j.id)) return false;
     if (listFilter.status && j.status !== listFilter.status) return false;
+    if (listFilter.tech && (j.technician || '(ไม่ระบุ)') !== listFilter.tech) return false;
     // งานที่ไม่มีวันที่รับงานจะไม่เข้าเงื่อนไขช่วงวันที่ใด ๆ
     if (listFilter.from && (!j.dateIn || j.dateIn < listFilter.from)) return false;
     if (listFilter.to   && (!j.dateIn || j.dateIn > listFilter.to))   return false;
@@ -700,9 +684,12 @@ function renderList() {
   $('#drillChip').hidden = !drill;
   if (drill) $('#drillLabel').textContent = `จากรายงาน: ${drill.label}`;
 
-  const range = listFilter.from || listFilter.to
-    ? ` · ${thaiDate(listFilter.from)} – ${thaiDate(listFilter.to)}` : '';
-  $('#listCount').textContent = `${rows.length} รายการ${range}`;
+  const bits = [];
+  if (listFilter.from || listFilter.to) bits.push(`${thaiDate(listFilter.from)} – ${thaiDate(listFilter.to)}`);
+  if (listFilter.tech) bits.push(listFilter.tech);
+  $('#listCount').textContent = `${rows.length} รายการ` + (bits.length ? ` · ${bits.join(' · ')}` : '');
+  $('#btnClearFilter').hidden =
+    !(drill || listFilter.q || listFilter.status || listFilter.from || listFilter.to || listFilter.tech);
   $('#jobList').innerHTML = rows.length ? rows.map(j => {
     const d = lossOf(j);
     return `<div class="job-card" data-id="${esc(j.id)}">
