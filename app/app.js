@@ -562,7 +562,12 @@ async function getDecoder() {
   return decoder;
 }
 
-$('#btnScan').addEventListener('click', async () => {
+/**
+ * เปิดกล้องสแกน QR แล้วส่งค่าที่อ่านได้ให้ผู้เรียก
+ * แยกออกมาเพื่อให้ปุ่มในฟอร์มและปุ่มในหน้าค้นหาใช้ตัวเดียวกัน
+ * @param {(raw:string)=>void} onResult
+ */
+async function openScanner(onResult) {
   $('#scanner').hidden = false;
   const msg = $('#scanMsg');
   msg.textContent = 'กำลังเตรียมตัวสแกน…';
@@ -597,12 +602,34 @@ $('#btnScan').addEventListener('click', async () => {
       const raw = await dec.read(video);
       if (!raw) return;
       closeScanner();
-      $('#fDocNo').value = raw.trim();
-      $('#fDocNo').dispatchEvent(new Event('input'));
-      toast('สแกนได้: ' + raw.trim());
+      onResult(raw.trim());
     } catch (_) { /* เฟรมนี้อ่านไม่ออก ข้ามไป */ }
   }, 300);
-});
+}
+
+/* ปุ่มในฟอร์ม — เติมเลขที่ใบส่งซ่อม */
+$('#btnScan').addEventListener('click', () => openScanner(raw => {
+  $('#fDocNo').value = raw;
+  $('#fDocNo').dispatchEvent(new Event('input'));
+  toast('สแกนได้: ' + raw);
+}));
+
+/* ปุ่มในหน้ารายการ — หางานจากใบซ่อม
+   เจองานเดียวเปิดให้เลย เพราะกรณีใช้จริงคือหยิบใบมาสแกนเพื่อกรอกตอนปิดงาน */
+$('#btnScanSearch').addEventListener('click', () => openScanner(raw => {
+  clearFilters();                       // ล้างตัวกรองเดิมก่อน ไม่งั้นอาจหาไม่เจอทั้งที่มีงานอยู่
+  listFilter.q = raw.toLowerCase();
+  $('#listSearch').value = raw;
+  renderList();
+
+  const hits = Store.jobs.filter(j => !j.deleted &&
+    [j.id, j.docNo, j.pattern, j.branch, j.defectKind, j.defectSpot, j.technician]
+      .join(' ').toLowerCase().includes(listFilter.q));
+
+  if (hits.length === 1) { openJob(hits[0].id); toast(`เปิดงาน ${hits[0].id}`); }
+  else if (hits.length === 0) toast(`ไม่พบงานของ ${raw}`);
+  else toast(`พบ ${hits.length} งาน`);
+}));
 function closeScanner() {
   clearInterval(scanTimer); scanTimer = null;
   scanStream?.getTracks().forEach(t => t.stop()); scanStream = null;
