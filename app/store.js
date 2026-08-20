@@ -192,9 +192,25 @@ const Store = (() => {
         const j = jobs.find(x => x.id === item.id) || await get('jobs', item.id);
         if (j) await API.upsert('jobs', toDb(j));
       } else if (item.kind === 'lists') {
-        const rows = Object.keys(lists).map(name => ({
-          name, values: lists[name], disabled: disabled[name] || [],
-        }));
+        /* รวมกับของบน cloud เสมอ ไม่เขียนทับ
+           ในแอปไม่มีทางไหนที่ "ลบ" ค่าออกจากรายการตัวเลือกได้ (ปิดใช้ได้เท่านั้น)
+           รายการที่หดลงจึงแปลว่าเกิดบั๊ก ไม่ใช่เจตนาของผู้ใช้ — กันไว้ที่นี่
+           ยกเว้น userNames ที่เป็นชื่อผู้ใช้ตามลำดับ ต้องเขียนทับจริง
+           ไม่งั้นเปลี่ยนชื่อทีก็จะพอกเพิ่มไปเรื่อย ๆ
+           ส่วน disabled เขียนทับได้ เพราะกดเปิดใช้คืนเป็นการลบออกที่ตั้งใจ */
+        const remote = {};
+        try {
+          (await API.select('lists', 'select=*'))
+            .forEach(r => { remote[r.name] = r.values || []; });
+        } catch { /* อ่านไม่ได้ก็ส่งของเราไปตามเดิม */ }
+
+        const rows = Object.keys(lists).map(name => {
+          const mine = lists[name] || [];
+          const values = name === 'userNames'
+            ? mine
+            : [...new Set([...(remote[name] || []), ...mine])].sort((a, b) => a.localeCompare(b, 'th'));
+          return { name, values, disabled: disabled[name] || [] };
+        });
         if (rows.length) await API.upsert('lists', rows);
       }
       await del('outbox', item.seq);

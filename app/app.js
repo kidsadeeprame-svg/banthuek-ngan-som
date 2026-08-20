@@ -231,9 +231,15 @@ async function enterApp(user) {
   refreshAll();
 
   const r = await doSync(false);
-  if (r === 'ok' && !boot.lists) await Store.saveLists(lists, disabled);  // ครั้งแรกสุด
-  lists = Store.lists || lists;
+
+  /* เอาของบน cloud มาก่อนเสมอ แล้วค่อยตัดสินใจว่าต้องส่งค่าตั้งต้นขึ้นไปไหม
+     เดิมเช็ค !boot.lists คือ "เครื่องนี้ยังไม่มีแคช" ซึ่งผิด —
+     เครื่องใหม่ (หรือเครื่องที่เพิ่งลบแอปแล้วติดตั้งใหม่) ยังไม่มีแคช
+     จึงเอา DEFAULT_LISTS ไปทับลวดลาย/Part/วิธีซ่อมของจริงบน cloud ทั้งชุด
+     ต้องเช็คว่า "cloud ยังไม่มีรายการ" ต่างหาก */
+  lists    = Store.lists    || lists;
   disabled = Store.disabled || disabled;
+  if (r === 'ok' && !Store.lists) await Store.saveLists(lists, disabled);
   refreshAll();
 }
 
