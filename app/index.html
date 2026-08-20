@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
-<link rel="stylesheet" href="app.css?v=14">
+<link rel="stylesheet" href="app.css?v=15">
 </head>
 <body>
 
@@ -98,6 +98,12 @@
             </button>
           </div>
           <p class="hint" id="branchHint"></p>
+          <!-- เตือนเลขซ้ำ — เตือนอย่างเดียว ไม่ห้ามบันทึก
+               ใบเดิมอาจถูกส่งซ่อมรอบสองได้จริง -->
+          <div class="dupe-warn" id="docDupe" hidden>
+            <span id="docDupeText"></span>
+            <button type="button" id="btnOpenDupe">เปิดงานเดิม</button>
+          </div>
         </div>
 
         <div class="grid-2">
@@ -378,9 +384,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=14"></script>
-<script src="api.js?v=14"></script>
-<script src="store.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="api.js?v=15"></script>
+<script src="store.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

@@ -355,8 +355,37 @@ $('#fDocNo').addEventListener('input', e => {
   } else {
     $('#branchHint').textContent = e.target.value ? 'แกะสาขาจากเลขนี้ไม่ได้ — กรอกสาขาเอง' : '';
   }
+  paintDupe();
 });
 $('#fBranch').addEventListener('input', e => { e.target.dataset.auto = '0'; });
+
+/* ─── เตือนเลขที่ใบส่งซ่อมซ้ำ ───
+   ไม่ห้ามบันทึก เพราะใบเดิมถูกส่งซ่อมรอบสองได้จริง
+   แต่ต้องเห็นก่อนว่ามันซ้ำ จะได้เลือกเองว่าจะแก้ใบเดิมหรือเปิดใบใหม่ */
+
+let dupeOf = null;          // งานที่เลขซ้ำกับที่กำลังพิมพ์
+
+function findDupe(docNo) {
+  const v = String(docNo || '').trim().toLowerCase();
+  if (!v) return null;
+  return Store.jobs.find(j =>
+    !j.deleted &&
+    j.id !== editing &&                                   // งานที่กำลังแก้อยู่ไม่นับว่าซ้ำกับตัวเอง
+    String(j.docNo || '').trim().toLowerCase() === v) || null;
+}
+
+function paintDupe() {
+  dupeOf = findDupe($('#fDocNo').value);
+  const box = $('#docDupe');
+  box.hidden = !dupeOf;
+  if (dupeOf) {
+    $('#docDupeText').innerHTML =
+      `เลขนี้เคยบันทึกแล้วเป็นงาน <b>${esc(dupeOf.id)}</b> ` +
+      `(รับงาน ${esc(thaiDate(dupeOf.dateIn))} · ${esc(dupeOf.status)})`;
+  }
+}
+
+$('#btnOpenDupe').addEventListener('click', () => { if (dupeOf) openJob(dupeOf.id); });
 
 ['#fWeightIn', '#fWeightOut', '#fWeightAdd'].forEach(s => $(s).addEventListener('input', updateDiff));
 
@@ -389,6 +418,7 @@ function startNewJob() {
   renderPhotoSlots(null);
   updateDiff(); syncBE();
   $('#branchHint').textContent = '';
+  paintDupe();
   $('#formError').hidden = true;
   $$('.step')[0].click();
 }
@@ -402,8 +432,9 @@ function openJob(id) {
   refreshFormLists(j);
   Object.entries(F).forEach(([k, sel]) => { const el = $(sel); if (el) el.value = j[k] ?? ''; });
   $('#fBranch').dataset.auto = '0';
-  $('#branchHint').textContent = j.branch ? `สาขา ${j.branch}` : '';
   renderPhotoSlots(j);
+  $('#branchHint').textContent = j.branch ? `สาขา ${j.branch}` : '';
+  paintDupe();
   updateDiff(); syncBE();
   $('#formError').hidden = true;
   showView('form');
@@ -443,6 +474,21 @@ $('#btnSave').addEventListener('click', async () => {
     return;
   }
   err.hidden = true;
+
+  /* เลขซ้ำ — ถามยืนยันก่อน ไม่ห้าม
+     ตรวจซ้ำตรงนี้อีกรอบ เผื่อกรอกเลขไว้ก่อนที่งานอีกใบจะซิงก์ลงมา */
+  const dupe = findDupe(f.docNo);
+  if (dupe && !confirm(
+      `เลขที่ใบส่งซ่อมนี้เคยบันทึกไว้แล้ว\n\n` +
+      `${dupe.id} — รับงาน ${thaiDate(dupe.dateIn)} (${dupe.status})\n` +
+      `${dupe.pattern || ''} ${dupe.defectKind || ''}`.trim() + `\n\n` +
+      `จะบันทึกเป็นงานใหม่อีกใบไหม?\n` +
+      `(ถ้าตั้งใจจะแก้ใบเดิม ให้กดยกเลิก แล้วกด "เปิดงานเดิม")`)) {
+    paintDupe();
+    $('#docDupe').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
   $('#btnSave').disabled = true;
 
   try {

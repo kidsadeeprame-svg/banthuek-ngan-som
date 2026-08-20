@@ -446,6 +446,22 @@ main{max-width:840px; margin:0 auto; padding:18px 16px 104px}
   .report-block{padding:16px 14px}
 }
 
+/* เตือนเลขที่ใบส่งซ่อมซ้ำ — สีเหลืองไม่ใช่แดง
+   เพราะเป็นคำเตือนให้ดูก่อน ไม่ใช่ข้อผิดพลาดที่ห้ามผ่าน */
+.dupe-warn{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-top:8px; padding:9px 12px;
+  background:var(--warn-bg); border:1px solid var(--warn-line);
+  border-radius:var(--r-sm); color:var(--warn);
+  font-size:.8rem; font-weight:600; line-height:1.45;
+}
+.dupe-warn span{flex:1; min-width:0}
+.dupe-warn button{
+  border:1px solid var(--warn-line); background:var(--card); color:var(--warn);
+  border-radius:99px; padding:5px 12px; font-size:.76rem; font-weight:700; white-space:nowrap;
+}
+.dupe-warn button:active{background:var(--warn-line)}
+
 /* ตัวกรองหน้ารายการ
    มือถือ: ค้นหาเต็มแถว ช่างเต็มแถว วันที่คู่กัน (เหมือนเดิมทุกอย่าง)
    จอคอม: ยุบเหลือแถวเดียว — เดิมกินความสูงเกือบ 400px
