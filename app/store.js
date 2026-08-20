@@ -47,7 +47,7 @@ const Store = (() => {
   /* ─────────── แปลงชื่อฟิลด์ app ⇄ ฐานข้อมูล ─────────── */
   const MAP = {
     id: 'id', dateIn: 'date_in', dateOut: 'date_out', status: 'status',
-    docNo: 'doc_no', branch: 'branch', productType: 'product_type',
+    docNo: 'doc_no', branch: 'branch', productType: 'product_type', category: 'category',
     pattern: 'pattern', part: 'part', defectKind: 'defect_kind', defectSpot: 'defect_spot',
     weightIn: 'weight_in', weightOut: 'weight_out', weightAdd: 'weight_add',
     method: 'method', technician: 'technician', recordedBy: 'recorded_by',

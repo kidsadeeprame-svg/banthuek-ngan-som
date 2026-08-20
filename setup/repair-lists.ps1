@@ -31,7 +31,7 @@ Say "ล็อกอินสำเร็จ ($($cfg.email))" 'Green'
 $jobs = @(); $offset = 0; $size = 1000
 do {
   $res = Invoke-WebRequest -Method Get -Headers $H -UseBasicParsing `
-    -Uri "$($cfg.supabaseUrl)/rest/v1/jobs?select=pattern,part,method,defect_kind,defect_spot,product_type,technician,deleted&order=id.asc&limit=$size&offset=$offset"
+    -Uri "$($cfg.supabaseUrl)/rest/v1/jobs?select=pattern,part,method,defect_kind,defect_spot,product_type,category,technician,deleted&order=id.asc&limit=$size&offset=$offset"
   $d = $res.Content | ConvertFrom-Json
   if     ($null -eq $d)          { $chunk = @() }
   elseif ($d -is [System.Array]) { $chunk = $d }
@@ -56,6 +56,7 @@ function BuildList($values, $baseline) {
 
 $L = @{
   productTypes = BuildList ($jobs.product_type) @('MOD-96.50%','DDD-75.00%')
+  categories   = BuildList ($jobs.category)     @('สร้อยคอ','สร้อยข้อมือ')
   patterns     = BuildList ($jobs.pattern)      @()
   parts        = BuildList ($jobs.part)         @()
   defectKinds  = BuildList ($jobs.defect_kind)  @('ขาด','ดีด','หัก','บุบ','หลุด','แตกลาย','ล็อคไม่แน่น','ด่าง','อื่น ๆ')

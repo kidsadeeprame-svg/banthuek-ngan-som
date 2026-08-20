@@ -8,7 +8,11 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const C  = window.CONFIG;
 
 const DEFAULT_LISTS = {
+  /* productTypes = "แผนกส่งงาน" บนหน้าจอ — ชื่อในโค้ดกับฐานข้อมูลยังเป็นของเดิม
+     เพราะงาน 1,417 ใบผูกกับคอลัมน์ product_type อยู่ เปลี่ยนชื่อคอลัมน์
+     ตอนนี้เสี่ยงเกินความจำเป็น เปลี่ยนแค่ป้ายที่ผู้ใช้เห็นก็พอ */
   productTypes: ['MOD-96.50%', 'DDD-75.00%'],
+  categories:   ['สร้อยคอ', 'สร้อยข้อมือ'],
   patterns:     [],
   parts:        [],
   defectKinds:  ['ขาด', 'ดีด', 'หัก', 'บุบ', 'หลุด', 'แตกลาย', 'ล็อคไม่แน่น', 'ด่าง', 'อื่น ๆ'],
@@ -290,19 +294,22 @@ $('#stepper').addEventListener('click', e => {
 
 const F = {
   docNo: '#fDocNo', dateIn: '#fDateIn', branch: '#fBranch',
-  productType: '#fProductType', pattern: '#fPattern', part: '#fPart',
+  productType: '#fProductType', category: '#fCategory',
+  pattern: '#fPattern', part: '#fPart',
   weightIn: '#fWeightIn', defectKind: '#fDefectKind', defectSpot: '#fDefectSpot',
   status: '#fStatus', weightOut: '#fWeightOut', weightAdd: '#fWeightAdd',
   method: '#fMethod', technician: '#fTechnician', dateOut: '#fDateOut', notes: '#fNotes',
 };
 const SELECT_LIST = {
-  fProductType: 'productTypes', fPattern: 'patterns', fPart: 'parts',
+  fProductType: 'productTypes', fCategory: 'categories',
+  fPattern: 'patterns', fPart: 'parts',
   fDefectKind: 'defectKinds', fDefectSpot: 'defectSpots',
   fMethod: 'methods', fTechnician: 'technicians',
 };
 
 function refreshFormLists(j = {}) {
   fillSelect($('#fProductType'), activeList('productTypes'), j.productType);
+  fillSelect($('#fCategory'),    activeList('categories'),   j.category, '— ไม่ระบุ —');
   fillSelect($('#fPattern'),     activeList('patterns'),     j.pattern);
   fillSelect($('#fPart'),        activeList('parts'),        j.part, '— ไม่มี —');
   fillSelect($('#fDefectKind'),  activeList('defectKinds'),  j.defectKind);
@@ -408,7 +415,7 @@ function validate(f) {
   const bad = [];
   if (!f.docNo.trim())    bad.push('เลขที่ใบส่งซ่อม');
   if (f.weightIn == null) bad.push('น้ำหนักรับซ่อม');
-  if (!f.productType)     bad.push('ประเภทสินค้า');
+  if (!f.productType)     bad.push('แผนกส่งงาน');
   if (!f.pattern)         bad.push('ลวดลาย');
   if (!f.defectKind)      bad.push('อาการชำรุด — ลักษณะ');
   if (!f.defectSpot)      bad.push('อาการชำรุด — ตำแหน่ง');
@@ -951,7 +958,7 @@ function renderSettings() {
 function renderListItems() {
   const name = $('#listPicker').value;
   const field = {
-    patterns: 'pattern', productTypes: 'productType', parts: 'part',
+    patterns: 'pattern', productTypes: 'productType', categories: 'category', parts: 'part',
     defectKinds: 'defectKind', defectSpots: 'defectSpot', methods: 'method',
   }[name];
   $('#listItems').innerHTML = (lists[name] || []).map(v => {
@@ -1024,7 +1031,8 @@ $('#btnExport').addEventListener('click', () => {
   const cols = [
     ['id', 'ลำดับงานซ่อม'], ['dateIn', 'วันที่รับงาน'], ['dateOut', 'วันที่ปิดงาน'],
     ['status', 'สถานะ'], ['docNo', 'เลขที่ใบส่งซ่อม'], ['branch', 'สาขา'],
-    ['productType', 'ประเภทสินค้า'], ['pattern', 'ลวดลาย'], ['part', 'Part'],
+    ['productType', 'แผนกส่งงาน'], ['category', 'ประเภทสินค้า'],
+    ['pattern', 'ลวดลาย'], ['part', 'Part'],
     ['defectKind', 'อาการชำรุด-ลักษณะ'], ['defectSpot', 'อาการชำรุด-ตำแหน่ง'],
     ['weightIn', 'น้ำหนักรับซ่อม'], ['weightOut', 'น้ำหนักส่ง'], ['weightAdd', 'นน.เติม'],
     ['__loss', 'ส่วนต่างน้ำหนัก'], ['method', 'วิธีซ่อม'], ['technician', 'ช่างผู้ซ่อม'],

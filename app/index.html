@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
-<link rel="stylesheet" href="app.css?v=13">
+<link rel="stylesheet" href="app.css?v=14">
 </head>
 <body>
 
@@ -113,16 +113,18 @@
         </div>
 
         <div class="grid-2">
-          <div class="field"><label for="fProductType">ประเภทสินค้า <i class="req">*</i></label><select id="fProductType"></select></div>
-          <div class="field"><label for="fPattern">ลวดลาย <i class="req">*</i></label><select id="fPattern"></select></div>
+          <div class="field"><label for="fProductType">แผนกส่งงาน <i class="req">*</i></label><select id="fProductType"></select></div>
+          <div class="field"><label for="fCategory">ประเภทสินค้า</label><select id="fCategory"></select></div>
         </div>
 
         <div class="grid-2">
+          <div class="field"><label for="fPattern">ลวดลาย <i class="req">*</i></label><select id="fPattern"></select></div>
           <div class="field"><label for="fPart">Part</label><select id="fPart"></select></div>
-          <div class="field">
-            <label for="fWeightIn">น้ำหนักรับซ่อม (ก.) <i class="req">*</i></label>
-            <input id="fWeightIn" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
-          </div>
+        </div>
+
+        <div class="field">
+          <label for="fWeightIn">น้ำหนักรับซ่อม (ก.) <i class="req">*</i></label>
+          <input id="fWeightIn" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
         </div>
 
         <div class="grid-2">
@@ -311,7 +313,8 @@
           <label for="listPicker">เลือกรายการที่จะแก้</label>
           <select id="listPicker">
             <option value="patterns">ลวดลาย</option>
-            <option value="productTypes">ประเภทสินค้า</option>
+            <option value="productTypes">แผนกส่งงาน</option>
+            <option value="categories">ประเภทสินค้า</option>
             <option value="parts">Part</option>
             <option value="defectKinds">อาการชำรุด — ลักษณะ</option>
             <option value="defectSpots">อาการชำรุด — ตำแหน่ง</option>
@@ -375,9 +378,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=13"></script>
-<script src="api.js?v=13"></script>
-<script src="store.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="config.js?v=14"></script>
+<script src="api.js?v=14"></script>
+<script src="store.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

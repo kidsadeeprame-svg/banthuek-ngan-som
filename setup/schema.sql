@@ -12,7 +12,8 @@ create table if not exists public.jobs (
   status        text not null default 'รับงาน',
   doc_no        text,
   branch        text,
-  product_type  text,
+  product_type  text,                             -- แสดงเป็น "แผนกส่งงาน" ในแอป
+  category      text,                             -- ประเภทสินค้า เช่น สร้อยคอ สร้อยข้อมือ
   pattern       text,
   part          text,
   defect_kind   text,
@@ -47,6 +48,12 @@ alter table public.jobs
       else weight_in + coalesce(weight_add, 0) - weight_out
     end
   ) stored;
+
+
+-- ตารางที่สร้างไว้ก่อนหน้านี้ยังไม่มีคอลัมน์นี้ — เพิ่มให้ด้วย
+-- (create table ข้างบนใช้ if not exists จึงไม่แตะตารางเดิม)
+alter table public.jobs
+  add column if not exists category text;
 
 create index if not exists jobs_date_in_idx     on public.jobs (date_in desc);
 create index if not exists jobs_status_idx      on public.jobs (status);
