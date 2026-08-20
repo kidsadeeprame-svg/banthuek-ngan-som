@@ -23,10 +23,14 @@ window.CONFIG = {
      PIN 6 หลัก = รหัสผ่านของบัญชีนั้น
 
      เพิ่มคนใหม่: สร้าง user ใน Supabase → Authentication → Users
-     แล้วมาเพิ่มบรรทัดตรงนี้ */
+     แล้วมาเพิ่มบรรทัดตรงนี้
+
+     role: 'admin' = เห็นครบทุกหน้า และแก้ชื่อที่แสดงของคนอื่นได้
+     role: 'staff' = ไม่เห็นหน้ารายงาน
+     ไม่ใส่ role = ถือว่าเป็น admin */
   USERS: [
-    { name: 'ผู้ใช้ 1', email: 'user1@banthuek.local' },
-    { name: 'ผู้ใช้ 2', email: 'user2@banthuek.local' },
+    { name: 'ผู้ใช้ 1', email: 'user1@banthuek.local', role: 'admin' },
+    { name: 'ผู้ใช้ 2', email: 'user2@banthuek.local', role: 'staff' },
   ],
 
   /* จำนวนหลักของ PIN — Supabase บังคับรหัสผ่านอย่างน้อย 6 ตัว จึงต้องเป็น 6 */

@@ -27,6 +27,40 @@ let editing = null;     // id ที่กำลังแก้
 let draftPhotos = {};   // slot -> { view: Blob, thumb: Blob, url } | null (=ลบ)
 let lists = {}, disabled = {};
 
+/* ═════════════ สิทธิ์ผู้ใช้ + ชื่อที่แสดง ═════════════
+   admin = เห็นครบทุกหน้า และแก้ชื่อที่แสดงของทุกคนได้
+   staff = ไม่เห็นหน้ารายงาน
+   ชื่อที่แสดงเก็บใน lists.userNames (ซิงก์ผ่าน Supabase เหมือนรายการอื่น)
+   และสำเนาไว้ใน localStorage เพราะหน้าล็อกอินต้องรู้ชื่อ
+   ก่อนจะเปิดฐานข้อมูลได้ */
+
+C.USERS.forEach((u, i) => { u.i = i; });
+
+const isAdmin = () => !!me && (me.role || 'admin') === 'admin';   // ไม่ระบุ role = admin
+
+const NAMES_KEY = 'gsrUserNames';
+let userNames = [];
+try { userNames = JSON.parse(localStorage.getItem(NAMES_KEY)) || []; } catch { userNames = []; }
+
+const nameOf = i => userNames[i] || C.USERS[i]?.name || '—';
+
+/* ดึงชื่อล่าสุดจาก lists มาเก็บไว้ให้หน้าล็อกอินใช้ครั้งหน้า */
+function cacheNames() {
+  const v = lists.userNames;
+  if (!Array.isArray(v) || !v.length) return;
+  userNames = v;
+  try { localStorage.setItem(NAMES_KEY, JSON.stringify(v)); } catch {}
+}
+
+/* ซ่อนหน้ารายงานสำหรับ staff — ทั้งปุ่มและตัวหน้า
+   เผื่อกำลังเปิดหน้ารายงานค้างอยู่ตอนสลับผู้ใช้ ให้เด้งกลับหน้าบันทึก */
+function applyRole() {
+  const admin = isAdmin();
+  $('.tab[data-view="report"]').hidden = !admin;
+  $('#blockUsers').hidden = !admin;
+  if (!admin && !$('#view-report').hidden) showView('form');
+}
+
 /* ═════════════ เครื่องมือ ═════════════ */
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -133,7 +167,7 @@ let pinBuf = '', pinUser = null, pinBusy = false;
 
 function renderLogin() {
   $('#userChips').innerHTML = C.USERS
-    .map((u, i) => `<button data-u="${i}">${esc(u.name)}</button>`).join('');
+    .map((u, i) => `<button data-u="${i}">${esc(nameOf(i))}</button>`).join('');
   $('#loginStep1').hidden = false;
   $('#loginStep2').hidden = true;
   $('#pinError').hidden = true;
@@ -148,7 +182,7 @@ $('#userChips').addEventListener('click', e => {
   const b = e.target.closest('[data-u]'); if (!b) return;
   pinUser = C.USERS[+b.dataset.u];
   pinBuf = '';
-  $('#loginName').textContent = pinUser.name;
+  $('#loginName').textContent = nameOf(pinUser.i);
   $('#loginStep1').hidden = true;
   $('#loginStep2').hidden = false;
   $('#pinError').hidden = true;
@@ -186,7 +220,7 @@ async function enterApp(user) {
   me = user;
   $('#login').hidden = true;
   $('#app').hidden = false;
-  $('#curUser').textContent = me.name;
+  $('#curUser').textContent = nameOf(me.i);
 
   const boot = await Store.boot();
   lists = boot.lists || JSON.parse(JSON.stringify(DEFAULT_LISTS));
@@ -220,6 +254,9 @@ $('.tabbar').addEventListener('click', e => {
 });
 
 function showView(name) {
+  /* กันหน้ารายงานไว้ที่นี่ด้วย ไม่ใช่แค่ซ่อนปุ่ม
+     เผื่อมีทางเข้าอื่น เช่น คลิกทะลุจากที่อื่น */
+  if (name === 'report' && !isAdmin()) name = 'form';
   $$('.view').forEach(v => { v.hidden = v.id !== 'view-' + name; });
   $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.view === name));
   if (name === 'list')     renderList();
@@ -227,7 +264,13 @@ function showView(name) {
   if (name === 'settings') renderSettings();
   window.scrollTo(0, 0);
 }
-const refreshAll = () => { renderList(); renderReport(); renderSettings(); refreshFormLists(readForm()); };
+const refreshAll = () => {
+  cacheNames(); applyRole();
+  renderList();
+  if (isAdmin()) renderReport();
+  renderSettings();
+  refreshFormLists(readForm());
+};
 
 $('#stepper').addEventListener('click', e => {
   const b = e.target.closest('[data-step]'); if (!b) return;
@@ -880,7 +923,7 @@ function renderReport() {
 
 function renderSettings() {
   $('#syncInfo').innerHTML = `
-    <div class="mini-row"><span>ผู้ใช้</span><span class="used">${esc(me?.name || '—')}</span></div>
+    <div class="mini-row"><span>ผู้ใช้</span><span class="used">${esc(me ? nameOf(me.i) : '—')}</span></div>
     <div class="mini-row"><span>งานในเครื่อง</span><span class="used">${Store.jobs.length}</span></div>
     <div class="mini-row"><span>รอส่งขึ้น cloud</span><span class="used">${Store.pending}</span></div>
     <div class="mini-row"><span>สถานะ</span><span class="used">${navigator.onLine ? 'ออนไลน์' : 'ออฟไลน์'}</span></div>`;
@@ -893,6 +936,7 @@ function renderSettings() {
       <button data-toggle="technicians|${esc(t)}">${off ? 'เปิดใช้' : 'ปิดใช้'}</button></div>`;
   }).join('') || '<p class="hint">ยังไม่มีช่าง</p>';
 
+  renderUsers();
   renderListItems();
 }
 
@@ -910,6 +954,36 @@ function renderListItems() {
   }).join('') || '<p class="hint">ยังไม่มีค่าในรายการนี้</p>';
 }
 $('#listPicker').addEventListener('change', renderListItems);
+
+/* ─── ชื่อผู้ใช้ (admin เท่านั้น) ─── */
+
+function renderUsers() {
+  if (!me || !isAdmin()) return;
+  $('#listUsers').innerHTML = C.USERS.map((u, i) => `
+    <div class="input-row">
+      <input type="text" data-uname="${i}" maxlength="24"
+             value="${esc(nameOf(i))}" aria-label="ชื่อที่แสดงของ ${esc(u.email)}">
+      <button class="btn-sm" data-saveuname="${i}">บันทึก</button>
+    </div>
+    <p class="hint">${esc(u.email)} · ${(u.role || 'admin') === 'staff'
+      ? 'ไม่เห็นหน้ารายงาน' : 'ผู้ดูแล — เห็นทุกหน้า'}${i === me.i ? ' · กำลังใช้อยู่' : ''}</p>`).join('');
+}
+
+$('#listUsers').addEventListener('click', async e => {
+  const b = e.target.closest('[data-saveuname]'); if (!b) return;
+  if (!me || !isAdmin()) return;
+  const i = +b.dataset.saveuname;
+  const v = $(`[data-uname="${i}"]`).value.trim();
+  if (!v)             return toast('ชื่อว่างไม่ได้');
+  if (v === nameOf(i)) return toast('ชื่อเดิมอยู่แล้ว');
+  /* เขียนทั้งชุดทุกครั้ง กันช่องว่างตอนที่ยังไม่เคยตั้งชื่อใครเลย */
+  lists.userNames = C.USERS.map((_, k) => k === i ? v : nameOf(k));
+  await Store.saveLists(lists, disabled);
+  cacheNames();
+  if (i === me.i) $('#curUser').textContent = v;
+  renderSettings();
+  toast(`เปลี่ยนชื่อเป็น ${v} แล้ว`);
+});
 
 $('#view-settings').addEventListener('click', async e => {
   const t = e.target.closest('[data-toggle]'); if (!t) return;
