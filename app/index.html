@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
-<link rel="stylesheet" href="app.css?v=10">
+<link rel="stylesheet" href="app.css?v=12">
 </head>
 <body>
 
@@ -198,30 +198,25 @@
         <span id="drillLabel"></span>
         <button id="drillClear" title="ล้างตัวกรอง">✕</button>
       </div>
-      <div class="field">
-        <div class="input-row">
-          <input id="listSearch" type="search" placeholder="ค้นหา เลขงาน / ใบซ่อม / ลวดลาย / สาขา">
-          <button id="btnScanSearch" class="btn-icon" title="สแกน QR เพื่อหางาน" aria-label="สแกน QR เพื่อหางาน">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"/>
-              <path d="M7 12h10"/></svg>
-          </button>
+      <!-- ตัวกรองทั้งหมดอยู่ในตะแกรงเดียว
+           มือถือเรียงลงมาเหมือนเดิม จอคอมเรียงเป็นแถวเดียว -->
+      <div class="filter-grid">
+        <div class="field f-search">
+          <div class="input-row">
+            <input id="listSearch" type="search" placeholder="ค้นหา เลขงาน / ใบซ่อม / ลวดลาย / สาขา">
+            <button id="btnScanSearch" class="btn-icon" title="สแกน QR เพื่อหางาน" aria-label="สแกน QR เพื่อหางาน">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"/>
+                <path d="M7 12h10"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="filter-row" id="statusFilter">
-        <button class="pill is-on" data-status="">ทั้งหมด</button>
-        <button class="pill" data-status="รับงาน">รับงาน</button>
-        <button class="pill" data-status="กำลังซ่อม">กำลังซ่อม</button>
-        <button class="pill" data-status="เสร็จสิ้น">เสร็จสิ้น</button>
-        <button class="pill" data-status="ไม่ซ่อม">ไม่ซ่อม</button>
-      </div>
 
-      <div class="field">
-        <label for="lTech">ช่างผู้ซ่อม</label>
-        <select id="lTech"></select>
-      </div>
+        <div class="field f-tech">
+          <label for="lTech">ช่างผู้ซ่อม</label>
+          <select id="lTech"></select>
+        </div>
 
-      <div class="grid-2">
         <div class="field">
           <label for="lFrom">ตั้งแต่ <span class="be" data-be="lFrom"></span></label>
           <input id="lFrom" type="date">
@@ -230,6 +225,14 @@
           <label for="lTo">ถึง <span class="be" data-be="lTo"></span></label>
           <input id="lTo" type="date">
         </div>
+      </div>
+
+      <div class="filter-row" id="statusFilter">
+        <button class="pill is-on" data-status="">ทั้งหมด</button>
+        <button class="pill" data-status="รับงาน">รับงาน</button>
+        <button class="pill" data-status="กำลังซ่อม">กำลังซ่อม</button>
+        <button class="pill" data-status="เสร็จสิ้น">เสร็จสิ้น</button>
+        <button class="pill" data-status="ไม่ซ่อม">ไม่ซ่อม</button>
       </div>
 
       <div class="count-row">
@@ -372,9 +375,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=10"></script>
-<script src="api.js?v=10"></script>
-<script src="store.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="config.js?v=12"></script>
+<script src="api.js?v=12"></script>
+<script src="store.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

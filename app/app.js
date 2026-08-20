@@ -262,6 +262,8 @@ function showView(name) {
   if (name === 'list')     renderList();
   if (name === 'report')   renderReport();
   if (name === 'settings') renderSettings();
+  /* จอคอม main เป็นตัวเลื่อนเอง ไม่ใช่ทั้งหน้า จึงต้องรีเซ็ตทั้งสองที่ */
+  $('main').scrollTop = 0;
   window.scrollTo(0, 0);
 }
 const refreshAll = () => {

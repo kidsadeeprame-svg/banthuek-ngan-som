@@ -445,3 +445,76 @@ main{max-width:840px; margin:0 auto; padding:18px 16px 104px}
   main{padding:16px 14px 104px}
   .report-block{padding:16px 14px}
 }
+
+/* ตัวกรองหน้ารายการ
+   มือถือ: ค้นหาเต็มแถว ช่างเต็มแถว วันที่คู่กัน (เหมือนเดิมทุกอย่าง)
+   จอคอม: ยุบเหลือแถวเดียว — เดิมกินความสูงเกือบ 400px
+          ก่อนจะถึงงานใบแรก ซึ่งสูงกว่าตัวงานที่มันกรองเสียอีก */
+.filter-grid{display:grid; grid-template-columns:1fr 1fr; gap:0 13px}
+.filter-grid .f-search,.filter-grid .f-tech{grid-column:1 / -1}
+/* จอเล็กมากบังคับคอลัมน์เดียว เหมือนที่ .grid-2 ทำ */
+@media (max-width:560px){ .filter-grid{grid-template-columns:1fr} }
+
+/* ═══════════ จอคอม ═══════════
+   เปลี่ยนจากโครงมือถือ (แถบเมนูล่าง เนื้อหาคอลัมน์แคบกลางจอ)
+   เป็นโครงแอปบนเดสก์ท็อป — เมนูอยู่ซ้าย เนื้อหาเลื่อนในกรอบตัวเอง
+   ต่ำกว่า 900px ไม่แตะเลย มือถือ/แท็บเล็ตแนวตั้งได้ของเดิมครบ */
+@media (min-width:900px){
+
+  /* หัว = เต็มแถวบน · เมนู = คอลัมน์ซ้าย · เนื้อหา = คอลัมน์ขวา
+     ล็อกความสูงไว้ที่จอ แล้วให้ main เลื่อนเอง
+     หัวกับเมนูจึงอยู่กับที่โดยไม่ต้องคำนวณ sticky */
+  #app{
+    display:grid;
+    grid-template-columns:230px minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);
+    height:100vh; overflow:hidden;
+  }
+  .topbar{grid-column:1 / -1; padding:13px 22px}
+
+  .tabbar{
+    position:static; grid-column:1; grid-row:2;
+    display:flex; flex-direction:column; gap:3px;
+    padding:14px 12px; overflow-y:auto;
+    border-top:0; border-right:1px solid var(--line);
+    background:transparent; backdrop-filter:none; -webkit-backdrop-filter:none;
+  }
+  .tab{
+    flex-direction:row; justify-content:flex-start; gap:11px;
+    padding:11px 14px; font-size:.9rem;
+  }
+  .tab span{font-size:1.15rem}
+
+  main{
+    grid-column:2; grid-row:2; overflow-y:auto; overscroll-behavior:contain;
+    max-width:none; margin:0; padding:22px 26px 40px;
+  }
+  main > .view{max-width:1040px; margin:0 auto}
+  /* ฟอร์มไม่ต้องกว้างตาม — ช่องกรอกยาวครึ่งจอกรอกยากกว่าเดิม */
+  main > #view-form{max-width:860px}
+
+  /* 900–1199px เนื้อหาเหลือราว 730px แบ่ง 4 ช่องแล้วช่องวันที่เหลือ 130px
+     ซึ่งแคบกว่าที่ dd/mm/yyyy ต้องใช้ — จึงแบ่งแค่ 2 ช่องต่อแถว */
+  .filter-grid{align-items:end}
+  .filter-grid .f-search,.filter-grid .f-tech{grid-column:auto}
+
+  /* หน้าตั้งค่าเป็นกล่องสั้น ๆ หลายกล่อง เรียงเดี่ยวแล้วโล่งเกินไป */
+  #view-settings{display:grid; grid-template-columns:1fr 1fr; gap:15px; align-items:start}
+  #view-settings .view-head{grid-column:1 / -1; margin-bottom:3px}
+
+  .banner{margin-inline:0}
+}
+
+
+/* จอกว้าง 1200px ขึ้นไป — ตัวกรองเรียงแถวเดียวได้พอดี
+   และการ์ดงานสองคอลัมน์ ไม่งั้น 40 ใบทำให้หน้ายาว 5,000px */
+@media (min-width:1200px){
+  .filter-grid{grid-template-columns:2fr 1.3fr 1fr 1fr}
+  .job-list{grid-template-columns:1fr 1fr; gap:11px}
+}
+
+/* จอกว้างมาก — ขยายกรอบเนื้อหาอีกนิด แต่ยังคุมไม่ให้ยืดเต็มจอ
+   บรรทัดยาวเกิน ~1,200px อ่านแล้วสายตาหลุดบรรทัด */
+@media (min-width:1500px){
+  main > .view{max-width:1180px}
+}
