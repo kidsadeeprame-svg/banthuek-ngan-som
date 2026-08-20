@@ -395,7 +395,7 @@ function updateDiff() {
   if (d === null) { box.hidden = true; return; }
   box.hidden = false;
   val.className = 'diff-value ' + (d > 0.005 ? 'bad' : 'ok');
-  val.textContent = d > 0 ? `− ${d.toFixed(2)} ก. (หาย)`
+  val.textContent = d > 0 ? `− ${d.toFixed(2)} ก. (สูญเสีย)`
                   : d < 0 ? `+ ${Math.abs(d).toFixed(2)} ก. (เกิน)` : '0.00 ก. (ครบ)';
 }
 
@@ -835,7 +835,7 @@ function renderList() {
       <div class="job-card-sub">
         <span>${esc(j.docNo || '—')}</span><span>${esc(j.branch || '—')}</span>
         <span>${thaiDate(j.dateIn)}</span>
-        ${d !== null && d > 0.005 ? `<span style="color:var(--bad)">หาย ${d.toFixed(2)} ก.</span>` : ''}
+        ${d !== null && d > 0.005 ? `<span style="color:var(--bad)">สูญเสีย ${d.toFixed(2)} ก.</span>` : ''}
       </div></div>`;
   }).join('') : `<p class="empty">ไม่พบรายการ</p>`;
 }
@@ -928,14 +928,14 @@ function renderReport() {
        }).join('')}</tbody>`;
   } else $('#repMatrix').innerHTML = `<tbody><tr><td>ไม่มีข้อมูล</td></tr></tbody>`;
 
-  /* 2 · น้ำหนักสูญหาย */
+  /* 2 · น้ำหนักสูญเสีย */
   const withLoss = rows.map(r => ({ r, d: lossOf(r) })).filter(x => x.d !== null);
   const total = withLoss.reduce((a, x) => a + Math.max(0, x.d), 0);
   const lostJobs = withLoss.filter(x => x.d > 0.005).length;
   $('#repLossTotal').innerHTML = `
     <div><b>${withLoss.length}</b><span>งานที่ชั่งครบ 2 ครั้ง</span></div>
-    <div><b style="color:var(--bad)">${total.toFixed(2)} ก.</b><span>รวมทองสูญหาย</span></div>
-    <div><b>${lostJobs}</b><span>งานที่มีการสูญหาย</span></div>`;
+    <div><b style="color:var(--bad)">${total.toFixed(2)} ก.</b><span>รวมทองสูญเสีย</span></div>
+    <div><b>${lostJobs}</b><span>งานที่มีการสูญเสีย</span></div>`;
 
   const sumBy = keyFn => {
     const m = new Map();
