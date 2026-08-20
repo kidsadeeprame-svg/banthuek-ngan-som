@@ -518,6 +518,10 @@ main{max-width:840px; margin:0 auto; padding:18px 16px 104px}
   #view-settings{display:grid; grid-template-columns:1fr 1fr; gap:15px; align-items:start}
   #view-settings .view-head{grid-column:1 / -1; margin-bottom:3px}
 
+  /* ช่องรูปเป็นสี่เหลี่ยมจัตุรัส กริดกว้างเท่าไรก็สูงตามเท่านั้น
+     บนจอคอมกลายเป็น 333px ต่อช่อง กินที่มากกว่าฟอร์มทั้งหมดรวมกัน */
+  .photo-grid{grid-template-columns:repeat(3,minmax(0,200px))}
+
   .banner{margin-inline:0}
 }
 
@@ -533,4 +537,41 @@ main{max-width:840px; margin:0 auto; padding:18px 16px 104px}
    บรรทัดยาวเกิน ~1,200px อ่านแล้วสายตาหลุดบรรทัด */
 @media (min-width:1500px){
   main > .view{max-width:1180px}
+}
+
+/* ═══════════ ฟอร์มบนจอกว้าง ═══════════
+   จอคอมมีที่เหลือเยอะ แต่ฟอร์มยังเรียง 2 ช่องต่อแถวแบบมือถือ
+   ช่องวันที่จึงกว้าง 400px และช่องน้ำหนักกินเต็มแถวทั้งที่พิมพ์แค่ 5 ตัว
+   ยาวลงไปหลายแถว ต้องเลื่อนจอกว่าจะถึงปุ่มบันทึก
+
+   วิธีจัด: ทำ .step-panel เป็นตะแกรง 3 ช่อง แล้วสั่งให้ .grid-2
+   เป็น display:contents — ตัวห่อหายไป ช่องข้างในเลื่อนขึ้นมาเป็น
+   ลูกของตะแกรงใหญ่โดยตรง จึงไหลต่อกันได้ 3 ช่องต่อแถว
+   โดยไม่ต้องรื้อโครง HTML ที่มือถือใช้อยู่ */
+@media (min-width:1100px){
+
+  main > #view-form{max-width:1060px}
+
+  /* แถบขั้นตอนไม่ต้องยืดเต็มแถว ปุ่ม 2 ปุ่มกว้างครึ่งจอดูโล่ง */
+  .stepper{grid-template-columns:auto auto; justify-content:start; gap:10px}
+  .step{padding:11px 30px}
+
+  .step-panel{
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:0 16px; align-items:start; padding:20px 20px 8px;
+  }
+  .step-panel > .grid-2{display:contents}
+
+  /* ช่องที่สมควรกว้างกว่าเพื่อน */
+  .step-panel > .field:has(#fDocNo){grid-column:span 2}
+  .step-panel > .field:has(#fNotes){grid-column:span 2}
+
+  /* หัวข้อกับแถวรูปกินเต็มความกว้าง */
+  .step-panel > .label{grid-column:1 / -1; margin-top:10px}
+  .step-panel > .photo-grid{grid-column:1 / -1}
+  .step-panel > .diff-box{margin-top:0}
+
+  /* ปุ่มบันทึกไม่ต้องยาวเต็มแถว */
+  .form-actions{justify-content:flex-end}
+  .form-actions .btn-primary{flex:0 0 auto; min-width:190px}
 }
