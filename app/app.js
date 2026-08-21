@@ -60,7 +60,8 @@ function cacheNames() {
    เผื่อกำลังเปิดหน้ารายงานค้างอยู่ตอนสลับผู้ใช้ ให้เด้งกลับหน้าบันทึก */
 function applyRole() {
   const admin = isAdmin();
-  $('.tab[data-view="report"]').hidden = !admin;
+  // ซ่อนทั้งเมนูล่าง (มือถือ) และเมนูซ้าย (จอคอม)
+  $$('[data-view="report"]').forEach(el => { el.hidden = !admin; });
   $('#blockUsers').hidden = !admin;
   if (!admin && !$('#view-report').hidden) showView('form');
 }
@@ -111,6 +112,127 @@ function fillSelect(el, values, current, placeholder = '— เลือก —'
     [...values, ...extra].map(v => `<option${v === current ? ' selected' : ''}>${esc(v)}</option>`).join('') +
     `<option value="__new">➕ เพิ่มค่าใหม่…</option>`;
 }
+
+/* ═════════════ ชิปเลือกค่า ═════════════
+   ดีไซน์ 1b/1g เลือกค่าด้วยชิป กดทีเดียวจบ ไม่ต้องเปิด dropdown ทีละช่อง
+   ค่าจริงยังเก็บใน <select> ที่ซ่อนไว้เหมือนเดิม — readForm/openJob/validate
+   ทำงานต่อได้โดยไม่ต้องแก้อะไร ชิปเป็นแค่หน้ากากที่คอยตั้งค่า select ให้
+
+   ลวดลายมี 195 ค่า โชว์เป็นชิปทั้งหมดไม่ไหว จึงเรียงตามที่ใช้จริงจากงาน
+   ที่บันทึกไว้ โชว์แค่ N ตัวแรก ที่เหลืออยู่หลังปุ่ม "ทั้งหมด" ซึ่งค้นหาได้ */
+
+function useCount(field) {
+  const m = new Map();
+  Store.jobs.forEach(j => {
+    if (j.deleted) return;
+    const v = j[field]; if (v) m.set(v, (m.get(v) || 0) + 1);
+  });
+  return m;
+}
+const byUse = (cnt) => (a, b) => (cnt.get(b) || 0) - (cnt.get(a) || 0) || a.localeCompare(b, 'th');
+
+function chipOptions(box) {
+  const sel = $('#' + box.dataset.for);
+  return [...sel.options].map(o => o.value).filter(v => v && v !== '__new');
+}
+
+function renderChips(box) {
+  const sel = $('#' + box.dataset.for);
+  if (!sel) return;
+  const all = chipOptions(box);
+  let top;
+  if (box.dataset.all) top = all;
+  else {
+    const n = +box.dataset.top || 4;
+    top = [...all].sort(byUse(useCount(box.dataset.field))).slice(0, n);
+    // ค่าที่เลือกอยู่ต้องเห็นเสมอ ถึงจะไม่ติดอันดับใช้บ่อยก็ตาม
+    if (sel.value && !top.includes(sel.value)) top.unshift(sel.value);
+  }
+  const lead = box.dataset.lead ? `<span class="chip-lead">${esc(box.dataset.lead)}</span>` : '';
+  const none = box.dataset.none
+    ? `<button type="button" class="chip chip-none${sel.value ? '' : ' on'}" data-v="">${esc(box.dataset.none)}</button>`
+    : '';
+  const more = (box.dataset.all || all.length <= top.length) ? ''
+    : `<button type="button" class="chip chip-more" data-more="1">ทั้งหมด ▾</button>`;
+  box.innerHTML = lead + none + top.map(v =>
+    `<button type="button" class="chip${v === sel.value ? ' on' : ''}" data-v="${esc(v)}">${esc(v)}</button>`
+  ).join('') + more;
+}
+const paintChips = () => $$('.chips[data-for]').forEach(renderChips);
+
+function setChip(box, v) {
+  const sel = $('#' + box.dataset.for);
+  sel.value = v;
+  sel.dispatchEvent(new Event('change', { bubbles: true }));   // ให้ตัวจับ change เดิมทำงานต่อ
+  renderChips(box);
+  updateProgress();
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.chips [data-v], .chips [data-more]');
+  if (!btn) return;
+  const box = btn.closest('.chips');
+  if (btn.dataset.more !== undefined) return openPicker(box);
+  setChip(box, btn.dataset.v);
+});
+
+/* ─── ตัวเลือกทั้งหมด (ค้นหาได้) ─── */
+let pickerBox = null;
+
+function openPicker(box) {
+  pickerBox = box;
+  const lb = box.closest('.fset')?.querySelector('label');
+  $('#pickerTitle').textContent = (lb ? lb.textContent : 'เลือกค่า').replace('*', '').trim();
+  $('#pickerSearch').value = '';
+  $('#picker').hidden = false;
+  paintPicker();
+  setTimeout(() => $('#pickerSearch').focus(), 40);
+}
+function closePicker() { $('#picker').hidden = true; pickerBox = null; }
+
+function paintPicker() {
+  if (!pickerBox) return;
+  const sel = $('#' + pickerBox.dataset.for);
+  const q = $('#pickerSearch').value.trim().toLowerCase();
+  const cnt = useCount(pickerBox.dataset.field);
+  const hits = chipOptions(pickerBox)
+    .filter(v => !q || v.toLowerCase().includes(q))
+    .sort(byUse(cnt));
+  $('#pickerList').innerHTML = hits.length
+    ? hits.map(v => `<button type="button" class="${v === sel.value ? 'on' : ''}" data-pv="${esc(v)}">
+        <span>${esc(v)}</span><i>${cnt.get(v) || 0}</i></button>`).join('')
+    : `<p class="picker-empty">ไม่พบ “${esc(q)}”</p>`;
+}
+$('#pickerSearch').addEventListener('input', paintPicker);
+$('#pickerClose').addEventListener('click', closePicker);
+$('#picker').addEventListener('click', e => {
+  if (e.target.id === 'picker') return closePicker();
+  const b = e.target.closest('[data-pv]');
+  if (b && pickerBox) { setChip(pickerBox, b.dataset.pv); closePicker(); }
+});
+
+/* ─── แถบความคืบหน้าท้ายฟอร์ม ───
+   นับจาก validate() ตัวเดียวกับตอนกดบันทึก ตัวเลขจึงตรงกันเสมอ */
+function requiredTotal(f) {
+  return 6                                        // ใบซ่อม แผนก ลวดลาย นน.รับ ลักษณะ ตำแหน่ง
+       + 1                                        // ภาพชำรุด
+       + (f.status === 'เสร็จสิ้น' ? 3 : 0);      // นน.ส่ง วิธีซ่อม ช่าง
+}
+function updateProgress() {
+  if ($('#view-form').hidden) return;
+  const f = readForm();
+  const miss  = validate(f).length;
+  const total = requiredTotal(f);
+  const done  = Math.max(0, total - miss);
+  const txt = $('#progText');
+  txt.innerHTML = miss ? `เหลือช่องบังคับ <b>${miss}</b> ช่อง` : `กรอกครบ <b>${done}/${total}</b>`;
+  txt.classList.toggle('warn', miss > 0);
+  $('#progFill').style.width = (total ? done / total * 100 : 0) + '%';
+  $('#btnSave').classList.toggle('go-close', f.status === 'เสร็จสิ้น');
+  $('#btnSave').textContent = f.status === 'เสร็จสิ้น' ? 'ปิดงาน' : 'บันทึก';
+}
+$('#view-form').addEventListener('input',  updateProgress);
+$('#view-form').addEventListener('change', updateProgress);
 
 /* ช่อง <input type="date"> แสดง ค.ศ. เสมอ แก้ไม่ได้ จึงกำกับ พ.ศ. ที่ป้ายชื่อ */
 function syncBE() {
@@ -259,19 +381,41 @@ $('#btnSignOut').addEventListener('click', () => { if (confirm('ออกจา�
 
 /* ═════════════ สลับหน้า ═════════════ */
 
-$('.tabbar').addEventListener('click', e => {
+/* เมนูล่าง (มือถือ) กับเมนูซ้าย (จอคอม) ใช้ตัวจับเดียวกัน */
+$$('.tabbar, .rail-nav').forEach(nav => nav.addEventListener('click', e => {
   const b = e.target.closest('[data-view]'); if (b) showView(b.dataset.view);
-});
+}));
+
+let curView = 'form';
+let reportScope = '';
+
+function paintTopbar() {
+  const editing_ = !!editing;
+  const meta = {
+    form:     [editing_ ? 'แก้ไขงานซ่อม' : 'งานซ่อมใหม่', editing_ ? 'แก้ไขงานที่บันทึกไว้' : 'รับงานเข้าระบบ'],
+    list:     ['รายการงานซ่อม', ''],
+    report:   ['รายงาน', reportScope],
+    settings: ['ตั้งค่า', ''],
+  }[curView] || ['บันทึกงานซ่อม', ''];
+  $('#viewTitle').textContent = meta[0];
+  $('#viewSub').textContent   = meta[1];
+  // ขั้นตอน 1/2 เป็นของหน้าบันทึกเท่านั้น หน้าอื่นซ่อนไว้
+  $('#stepper').hidden   = curView !== 'form';
+  $('#formJobId').hidden = curView !== 'form';
+}
 
 function showView(name) {
   /* กันหน้ารายงานไว้ที่นี่ด้วย ไม่ใช่แค่ซ่อนปุ่ม
      เผื่อมีทางเข้าอื่น เช่น คลิกทะลุจากที่อื่น */
   if (name === 'report' && !isAdmin()) name = 'form';
+  curView = name;
   $$('.view').forEach(v => { v.hidden = v.id !== 'view-' + name; });
-  $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.view === name));
+  $$('.tab, .rnav').forEach(t => t.classList.toggle('is-on', t.dataset.view === name));
   if (name === 'list')     renderList();
   if (name === 'report')   renderReport();
   if (name === 'settings') renderSettings();
+  if (name === 'form')     updateProgress();
+  paintTopbar();
   /* จอคอม main เป็นตัวเลื่อนเอง ไม่ใช่ทั้งหน้า จึงต้องรีเซ็ตทั้งสองที่ */
   $('main').scrollTop = 0;
   window.scrollTo(0, 0);
@@ -286,9 +430,14 @@ const refreshAll = () => {
 
 $('#stepper').addEventListener('click', e => {
   const b = e.target.closest('[data-step]'); if (!b) return;
-  $$('.step').forEach(s => s.classList.toggle('is-on', s === b));
-  $$('.step-panel').forEach(p => { p.hidden = p.dataset.panel !== b.dataset.step; });
+  gotoStep(b.dataset.step);
 });
+function gotoStep(n) {
+  $$('.step').forEach(s => s.classList.toggle('is-on', s.dataset.step === n));
+  $$('.step-panel').forEach(p => { p.hidden = p.dataset.panel !== n; });
+  $('main').scrollTop = 0; window.scrollTo(0, 0);
+  updateProgress();
+}
 
 /* ═════════════ ฟอร์ม ═════════════ */
 
@@ -318,6 +467,7 @@ function refreshFormLists(j = {}) {
   fillSelect($('#fTechnician'),  activeList('technicians'),  j.technician);
   $('#dlBranch').innerHTML = [...new Set(Store.jobs.map(x => x.branch).filter(Boolean))]
     .sort().map(b => `<option value="${esc(b)}">`).join('');
+  paintChips();
 }
 
 Object.keys(SELECT_LIST).forEach(id => {
@@ -356,6 +506,7 @@ $('#fDocNo').addEventListener('input', e => {
     $('#branchHint').textContent = e.target.value ? 'แกะสาขาจากเลขนี้ไม่ได้ — กรอกสาขาเอง' : '';
   }
   paintDupe();
+  paintDocMeta();          // สาขาถูกเติมด้วยโค้ด ไม่มี event ของตัวเอง ต้องสั่งวาดเอง
 });
 $('#fBranch').addEventListener('input', e => { e.target.dataset.auto = '0'; });
 
@@ -389,14 +540,18 @@ $('#btnOpenDupe').addEventListener('click', () => { if (dupeOf) openJob(dupeOf.i
 
 ['#fWeightIn', '#fWeightOut', '#fWeightAdd'].forEach(s => $(s).addEventListener('input', updateDiff));
 
+/* ดีไซน์ 1c วางน้ำหนักรับ/ส่ง/สูญเสีย เรียงกันให้เทียบได้ในบรรทัดเดียว
+   ช่องสูญเสียจึงต้องอยู่เสมอ แสดง — ไว้จนกว่าจะชั่งครบทั้งสองครั้ง */
 function updateDiff() {
-  const d = lossOf(readForm());
-  const box = $('#diffBox'), val = $('#diffValue');
-  if (d === null) { box.hidden = true; return; }
-  box.hidden = false;
-  val.className = 'diff-value ' + (d > 0.005 ? 'bad' : 'ok');
-  val.textContent = d > 0 ? `− ${d.toFixed(2)} ก. (สูญเสีย)`
-                  : d < 0 ? `+ ${Math.abs(d).toFixed(2)} ก. (เกิน)` : '0.00 ก. (ครบ)';
+  const f = readForm();
+  const val = $('#diffValue'), lb = $('#diffLabel');
+  $('#wInEcho').innerHTML = f.weightIn == null ? '—'
+    : `${f.weightIn.toFixed(2)} <u>ก.</u>`;
+  const d = lossOf(f);
+  if (d === null) { val.className = 'ro-val'; val.textContent = '—'; lb.textContent = 'สูญเสีย · คิดให้'; return; }
+  val.className = 'ro-val ' + (d > 0.005 ? 'bad' : 'ok');
+  lb.textContent = d < -0.005 ? 'เกิน · คิดให้' : 'สูญเสีย · คิดให้';
+  val.innerHTML = `${Math.abs(d).toFixed(2)} <u>ก.</u>`;
 }
 
 $('#fStatus').addEventListener('change', e => {
@@ -405,40 +560,55 @@ $('#fStatus').addEventListener('change', e => {
   }
 });
 
+/* วันที่กับสาขาเติมให้เอง ปกติไม่ต้องแตะ จึงย่อเป็นบรรทัดเดียวเหนือช่องกรอก
+   กด "แก้" ถึงจะกางช่องจริงออกมา */
+function paintDocMeta() {
+  const d = $('#fDateIn').value, b = $('#fBranch').value;
+  $('#docMeta').textContent = `${d ? thaiDate(d) : '—'} · ${b ? 'สาขา ' + b : 'สาขาเติมอัตโนมัติ'}`;
+}
+$('#btnMetaEdit').addEventListener('click', () => {
+  const box = $('#metaEdit');
+  box.hidden = !box.hidden;
+  $('#btnMetaEdit').textContent = box.hidden ? 'แก้' : 'ปิด';
+});
+['#fDateIn', '#fBranch'].forEach(s => $(s).addEventListener('input', paintDocMeta));
+['#fDateIn', '#fBranch'].forEach(s => $(s).addEventListener('change', paintDocMeta));
+
 function startNewJob() {
   editing = null; draftPhotos = {};
-  $('#formTitle').textContent = 'งานซ่อมใหม่';
   $('#formJobId').textContent = nextJobId();
   $('#btnCancelEdit').hidden = true;
   Object.values(F).forEach(sel => { const el = $(sel); if (el) el.value = ''; });
   $('#fDateIn').value = todayISO();
   $('#fStatus').value = 'รับงาน';
   $('#fBranch').dataset.auto = '1';
+  $('#metaEdit').hidden = true; $('#btnMetaEdit').textContent = 'แก้';
   refreshFormLists({});
   renderPhotoSlots(null);
-  updateDiff(); syncBE();
+  updateDiff(); syncBE(); paintDocMeta();
   $('#branchHint').textContent = '';
   paintDupe();
   $('#formError').hidden = true;
-  $$('.step')[0].click();
+  gotoStep('1'); paintTopbar();
 }
 
 function openJob(id) {
   const j = Store.jobs.find(x => x.id === id); if (!j) return;
   editing = id; draftPhotos = {};
-  $('#formTitle').textContent = 'แก้ไขงานซ่อม';
   $('#formJobId').textContent = j.id;
   $('#btnCancelEdit').hidden = false;
   refreshFormLists(j);
   Object.entries(F).forEach(([k, sel]) => { const el = $(sel); if (el) el.value = j[k] ?? ''; });
   $('#fBranch').dataset.auto = '0';
+  $('#metaEdit').hidden = true; $('#btnMetaEdit').textContent = 'แก้';
   renderPhotoSlots(j);
-  $('#branchHint').textContent = j.branch ? `สาขา ${j.branch}` : '';
+  $('#branchHint').textContent = '';
   paintDupe();
-  updateDiff(); syncBE();
+  updateDiff(); syncBE(); paintDocMeta(); paintChips();
   $('#formError').hidden = true;
   showView('form');
-  $$('.step')[0].click();
+  // งานที่ยังไม่ปิด เปิดมาที่ขั้นรับงาน · งานที่ปิดแล้วเปิดมาที่ขั้นปิดงานเลย
+  gotoStep(j.status === 'รับงาน' ? '1' : '2');
 }
 $('#btnCancelEdit').addEventListener('click', startNewJob);
 
@@ -824,20 +994,49 @@ function renderList() {
   $('#listCount').textContent = `${rows.length} รายการ` + (bits.length ? ` · ${bits.join(' · ')}` : '');
   $('#btnClearFilter').hidden =
     !(drill || listFilter.q || listFilter.status || listFilter.from || listFilter.to || listFilter.tech);
-  $('#jobList').innerHTML = rows.length ? rows.map(j => {
+
+  /* จำนวนต่อสถานะบนปุ่มกรอง — นับจากชุดที่ผ่านตัวกรองอื่นแล้ว
+     ไม่ใช่ทั้งฐานข้อมูล ตัวเลขจะได้ตรงกับสิ่งที่จะเห็นจริงเมื่อกด */
+  const preStatus = Store.jobs.filter(j => {
+    if (j.deleted) return false;
+    if (drill && !drill.set.has(j.id)) return false;
+    if (listFilter.tech && (j.technician || '(ไม่ระบุ)') !== listFilter.tech) return false;
+    if (listFilter.from && (!j.dateIn || j.dateIn < listFilter.from)) return false;
+    if (listFilter.to   && (!j.dateIn || j.dateIn > listFilter.to))   return false;
+    if (!listFilter.q) return true;
+    return [j.id, j.docNo, j.pattern, j.branch, j.defectKind, j.defectSpot, j.technician]
+      .join(' ').toLowerCase().includes(listFilter.q);
+  });
+  $$('#statusFilter .pill').forEach(p => {
+    const s = p.dataset.status;
+    const n = s ? preStatus.filter(j => j.status === s).length : preStatus.length;
+    p.innerHTML = `${esc(p.dataset.status || 'ทั้งหมด')} <i>${n}</i>`;
+  });
+
+  if (!rows.length) { $('#jobList').innerHTML = `<p class="empty">ไม่พบรายการ</p>`; return; }
+
+  /* จัดกลุ่มตามวันรับงาน — ช่างมองหางานของวันนี้เป็นหลัก */
+  const today = todayISO();
+  let out = '', lastDay = null;
+  for (const j of rows) {
+    const day = j.dateIn || '';
+    if (day !== lastDay) {
+      lastDay = day;
+      const n = rows.filter(x => (x.dateIn || '') === day).length;
+      const name = !day ? 'ไม่ระบุวันที่' : day === today ? `วันนี้ · ${thaiDate(day)}` : thaiDate(day);
+      out += `<div class="day-hd">${esc(name)} <b>· ${n} งาน</b></div>`;
+    }
     const d = lossOf(j);
-    return `<div class="job-card" data-id="${esc(j.id)}">
-      <div class="job-card-top">
-        <span class="job-card-id">${esc(j.id)}</span>
-        <span class="badge s-${esc(j.status)}">${esc(j.status)}</span>
-      </div>
-      <div class="job-card-main">${esc(j.pattern || '—')} · ${esc(j.defectKind)}${j.defectSpot ? ' ' + esc(j.defectSpot) : ''}</div>
-      <div class="job-card-sub">
-        <span>${esc(j.docNo || '—')}</span><span>${esc(j.branch || '—')}</span>
-        <span>${thaiDate(j.dateIn)}</span>
-        ${d !== null && d > 0.005 ? `<span style="color:var(--bad)">สูญเสีย ${d.toFixed(2)} ก.</span>` : ''}
-      </div></div>`;
-  }).join('') : `<p class="empty">ไม่พบรายการ</p>`;
+    out += `<button type="button" class="job-row s-${esc(j.status)}" data-id="${esc(j.id)}">
+      <span class="jr-1"><span class="jr-id">${esc(j.id)}</span>
+      <span class="jr-main">${esc(j.pattern || '—')} <u>· ${esc(j.defectKind || '')}${j.defectSpot ? ' ' + esc(j.defectSpot) : ''}</u></span></span>
+      <span class="jr-2"><span class="jr-doc">${esc(j.docNo || '—')}</span>
+      <span class="jr-where">${esc(j.branch || '—')} · ${j.dateIn ? j.dateIn.slice(8) + '/' + j.dateIn.slice(5, 7) : '—'}</span>
+      <span class="jr-loss">${d !== null && d > 0.005 ? d.toFixed(2) : '<span class="muted">—</span>'}</span>
+      <span class="jr-st"><span class="st st-${esc(j.status)}">${esc(j.status)}</span></span></span>
+    </button>`;
+  }
+  $('#jobList').innerHTML = out;
 }
 $('#jobList').addEventListener('click', e => {
   const c = e.target.closest('[data-id]'); if (c) openJob(c.dataset.id);
@@ -870,12 +1069,12 @@ function bars(entries, opts = {}) {
   const max = Math.max(...entries.map(e => Math.abs(e[1]))) || 1;
   return entries.map(([name, v, ids]) => {
     const i = ids ? drillStore.push({ label: `${opts.title || ''} ${name}`.trim(), ids }) - 1 : -1;
-    return `<div class="bar-row${i >= 0 ? ' can-drill' : ''}"${i >= 0 ? ` data-drill="${i}"` : ''}>
-      <span class="bar-name" title="${esc(name)}">${esc(name)}</span>
-      <span class="bar-track"><span class="bar-fill ${opts.loss ? 'loss' : ''}"
-        style="width:${(Math.abs(v) / max * 100).toFixed(1)}%"></span></span>
+    return `<button type="button" class="bar-row${i >= 0 ? ' can-drill' : ''}"${i >= 0 ? ` data-drill="${i}"` : ''}>
+      <span title="${esc(name)}">${esc(name)}</span>
+      <span class="bar-track"><span class="bar-fill"
+        style="width:${(Math.abs(v) / max * 100).toFixed(1)}%${opts.loss ? ';background:var(--bad-2)' : ''}"></span></span>
       <span class="bar-val">${opts.fmt ? opts.fmt(v) : v}</span>
-    </div>`;
+    </button>`;
   }).join('');
 }
 
@@ -902,7 +1101,13 @@ function renderReport() {
   drillStore = [];
 
   const rows = reportRows();
-  $('#reportScope').textContent = `${rows.length} งาน ในเงื่อนไขที่เลือก · กดที่แถวใดก็ได้เพื่อดูรายการงาน`;
+  const fromV = $('#rFrom').value, toV = $('#rTo').value;
+  reportScope = [
+    fromV || toV ? `${fromV ? thaiDate(fromV) : '…'} – ${toV ? thaiDate(toV) : '…'}` : 'ทุกช่วงเวลา',
+    $('#rBranch').value || 'ทุกสาขา',
+    $('#rTech').value   || 'ทุกช่าง',
+  ].join(' · ');
+  if (curView === 'report') paintTopbar();
 
   /* 1 · อาการชำรุด */
   $('#repDefects').innerHTML = bars(
@@ -919,7 +1124,7 @@ function renderReport() {
        <tbody>${topPatterns.map(p => {
          const cells = topKinds.map(k => {
            const rs = cellRows(p, k);
-           if (!rs.length) return `<td>·</td>`;
+           if (!rs.length) return `<td class="nil">·</td>`;
            const i = drillStore.push({ label: `${p} · ${k}`, ids: rs.map(r => r.id) }) - 1;
            return `<td class="can-drill ${rs.length === maxCell ? 'hot' : ''}" data-drill="${i}">${rs.length}</td>`;
          });
@@ -932,10 +1137,20 @@ function renderReport() {
   const withLoss = rows.map(r => ({ r, d: lossOf(r) })).filter(x => x.d !== null);
   const total = withLoss.reduce((a, x) => a + Math.max(0, x.d), 0);
   const lostJobs = withLoss.filter(x => x.d > 0.005).length;
-  $('#repLossTotal').innerHTML = `
-    <div><b>${withLoss.length}</b><span>งานที่ชั่งครบ 2 ครั้ง</span></div>
-    <div><b style="color:var(--bad)">${total.toFixed(2)} ก.</b><span>รวมทองสูญเสีย</span></div>
-    <div><b>${lostJobs}</b><span>งานที่มีการสูญเสีย</span></div>`;
+  const rejN = rows.filter(r => r.status === 'ไม่ซ่อม').length;
+
+  /* ตัวเลขสำคัญขึ้นบนสุด ไม่ต้องเลื่อนหา (ดีไซน์ 1e) */
+  $('#repKpi').innerHTML = `
+    <div class="kpi"><div class="kpi-lb">งานทั้งหมด</div><div class="kpi-v">${rows.length}</div></div>
+    <div class="kpi"><div class="kpi-lb">ชั่งครบ 2 ครั้ง</div><div class="kpi-v">${withLoss.length}</div></div>
+    <div class="kpi bad"><div class="kpi-lb">รวมทองสูญเสีย</div><div class="kpi-v">${total.toFixed(2)} <u>ก.</u></div></div>
+    <div class="kpi"><div class="kpi-lb">อัตรา Reject</div><div class="kpi-v">${
+      rows.length ? (rejN / rows.length * 100).toFixed(1) : '0.0'}<u>%</u></div></div>`;
+
+  $('#repLossTotal').innerHTML =
+    `<span>งานที่ชั่งครบ 2 ครั้ง <b>${withLoss.length}</b></span>
+     <span>งานที่มีการสูญเสีย <b>${lostJobs}</b></span>
+     <span>รวมทองสูญเสีย <b>${total.toFixed(2)} ก.</b></span>`;
 
   const sumBy = keyFn => {
     const m = new Map();
@@ -980,14 +1195,23 @@ function renderReport() {
      }).join('')}</tbody>`;
 }
 
+/* สลับหัวข้อรายงานด้วยแท็บ แทนการเลื่อนยาวทีเดียว 3 หัวข้อ (ดีไซน์ 1e) */
+$('#repTabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-rtab]'); if (!b) return;
+  $$('.rtab').forEach(t => t.classList.toggle('is-on', t === b));
+  $$('[data-rpanel]').forEach(p => { p.hidden = p.dataset.rpanel !== b.dataset.rtab; });
+  $('main').scrollTop = 0;
+});
+
 /* ═════════════ ตั้งค่า ═════════════ */
 
 function renderSettings() {
+  const on = navigator.onLine;
   $('#syncInfo').innerHTML = `
-    <div class="mini-row"><span>ผู้ใช้</span><span class="used">${esc(me ? nameOf(me.i) : '—')}</span></div>
-    <div class="mini-row"><span>งานในเครื่อง</span><span class="used">${Store.jobs.length}</span></div>
-    <div class="mini-row"><span>รอส่งขึ้น cloud</span><span class="used">${Store.pending}</span></div>
-    <div class="mini-row"><span>สถานะ</span><span class="used">${navigator.onLine ? 'ออนไลน์' : 'ออฟไลน์'}</span></div>`;
+    <div class="stat"><div class="stat-lb">งานในเครื่อง</div><div class="stat-v">${Store.jobs.length}</div></div>
+    <div class="stat"><div class="stat-lb">รอส่งขึ้น cloud</div><div class="stat-v">${Store.pending}</div></div>
+    <div class="stat${on ? ' ok' : ''}"><div class="stat-lb">สถานะ</div><div class="stat-v">${on ? 'ออนไลน์' : 'ออฟไลน์'}</div></div>
+    <div class="stat"><div class="stat-lb">ผู้ใช้</div><div class="stat-v" style="font-family:inherit">${esc(me ? nameOf(me.i) : '—')}</div></div>`;
 
   const use = (field, v) => Store.jobs.filter(j => j[field] === v && !j.deleted).length;
   $('#listTech').innerHTML = (lists.technicians || []).map(t => {
@@ -1021,13 +1245,15 @@ $('#listPicker').addEventListener('change', renderListItems);
 function renderUsers() {
   if (!me || !isAdmin()) return;
   $('#listUsers').innerHTML = C.USERS.map((u, i) => `
-    <div class="input-row">
-      <input type="text" data-uname="${i}" maxlength="24"
-             value="${esc(nameOf(i))}" aria-label="ชื่อที่แสดงของ ${esc(u.email)}">
-      <button class="btn-sm" data-saveuname="${i}">บันทึก</button>
-    </div>
-    <p class="hint">${esc(u.email)} · ${(u.role || 'admin') === 'staff'
-      ? 'ไม่เห็นหน้ารายงาน' : 'ผู้ดูแล — เห็นทุกหน้า'}${i === me.i ? ' · กำลังใช้อยู่' : ''}</p>`).join('');
+    <div class="user-card">
+      <div class="input-row">
+        <input type="text" data-uname="${i}" maxlength="24"
+               value="${esc(nameOf(i))}" aria-label="ชื่อที่แสดงของ ${esc(u.email)}">
+        <button class="btn-soft" data-saveuname="${i}">บันทึก</button>
+      </div>
+      <div class="user-meta">${esc(u.email)} · ${(u.role || 'admin') === 'staff'
+        ? 'ไม่เห็นหน้ารายงาน' : 'ผู้ดูแล · เห็นทุกหน้า'}${i === me.i ? ' · <b>กำลังใช้อยู่</b>' : ''}</div>
+    </div>`).join('');
 }
 
 $('#listUsers').addEventListener('click', async e => {
@@ -1073,6 +1299,7 @@ $('#btnAddItem').addEventListener('click', () => {
 });
 
 /* ─── ส่งออก CSV ─── */
+$('#btnExportTop').addEventListener('click', () => $('#btnExport').click());
 $('#btnExport').addEventListener('click', () => {
   const cols = [
     ['id', 'ลำดับงานซ่อม'], ['dateIn', 'วันที่รับงาน'], ['dateOut', 'วันที่ปิดงาน'],

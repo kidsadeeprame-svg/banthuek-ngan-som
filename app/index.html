@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#8a6a1f">
+<meta name="theme-color" content="#b07d2b">
 <title>บันทึกงานซ่อม</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บันทึกงานซ่อม">
-<link rel="stylesheet" href="app.css?v=17">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css?v=18">
 </head>
 <body>
 
@@ -58,44 +61,61 @@
 <!-- ══════════════ แอป ══════════════ -->
 <div id="app" hidden>
 
+  <!-- เมนูจอคอม — ไอคอนล้วน เหลือความกว้างให้เนื้อหามากที่สุด
+       มือถือซ่อนอันนี้แล้วใช้ .tabbar ด้านล่างแทน -->
+  <aside class="rail">
+    <div class="rail-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l4 4-4 4-4-4z"/><path d="M12 13l4 4-4 4-4-4z"/></svg>
+    </div>
+    <nav class="rail-nav">
+      <button class="rnav is-on" data-view="form" title="บันทึก" aria-label="บันทึก">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4l5 5-9 9H6v-5z"/></svg></button>
+      <button class="rnav" data-view="list" title="รายการ" aria-label="รายการ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <button class="rnav" data-view="report" title="รายงาน" aria-label="รายงาน">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></button>
+      <button class="rnav" data-view="settings" title="ตั้งค่า" aria-label="ตั้งค่า">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21"/></svg></button>
+    </nav>
+    <button class="rail-sync" id="btnSync" data-state="ok" title="กดเพื่อซิงก์ทันที" aria-label="ซิงก์"><span class="dot"></span></button>
+  </aside>
+
   <header class="topbar">
-    <div class="topbar-title">
-      <span class="mark">◈</span>
-      <span>บันทึกงานซ่อม</span>
-    </div>
-    <div class="topbar-right">
-      <button id="btnSync" class="sync-btn" data-state="ok" title="กดเพื่อซิงก์ทันที">
-        <span class="dot"></span><span id="syncText">พร้อม</span>
-      </button>
-      <button id="btnUser" class="user-btn"><span id="curUser"></span> ▾</button>
-    </div>
-  </header>
-
-  <div id="banner" class="banner" hidden></div>
-
-  <main>
-    <!-- ─────────── หน้าบันทึกงาน ─────────── -->
-    <section id="view-form" class="view">
-      <div class="view-head">
-        <h2 id="formTitle">งานซ่อมใหม่</h2>
-        <span id="formJobId" class="job-id"></span>
-      </div>
-
+    <div class="tb-left">
+      <h1 id="viewTitle">งานซ่อมใหม่</h1>
+      <span class="tb-sub" id="viewSub"></span>
       <div class="stepper" id="stepper">
         <button class="step is-on" data-step="1"><b>1</b> รับงาน</button>
         <button class="step" data-step="2"><b>2</b> ปิดงาน</button>
       </div>
+    </div>
+    <div class="tb-right">
+      <span id="syncText" class="sync-text">พร้อม</span>
+      <span id="formJobId" class="job-id"></span>
+      <button id="btnUser" class="user-btn"><span id="curUser"></span> ▾</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="banner" class="banner" hidden></div>
+
+    <!-- ─────────── หน้าบันทึกงาน ─────────── -->
+    <section id="view-form" class="view">
 
       <div class="step-panel" data-panel="1">
-        <div class="field">
-          <label for="fDocNo">เลขที่ใบส่งซ่อม <i class="req">*</i></label>
-          <div class="input-row">
-            <input id="fDocNo" type="text" placeholder="ARSM1-FIX2511-00005" autocomplete="off">
-            <button id="btnScan" class="btn-icon" title="สแกน QR" aria-label="สแกน QR">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"/>
-                <path d="M7 12h10"/></svg>
+
+        <!-- สแกนนำ เพราะทุกใบเริ่มจากยิงบาร์โค้ดบนใบส่งซ่อม -->
+        <section class="card card-hi">
+          <div class="card-hd">
+            <label for="fDocNo">เลขที่ใบส่งซ่อม <i class="req">*</i></label>
+            <span class="card-meta"><span id="docMeta"></span><button type="button" class="lnk" id="btnMetaEdit">แก้</button></span>
+          </div>
+          <div class="scan-row">
+            <button id="btnScan" class="btn-scan" title="สแกน QR" aria-label="สแกน QR">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V5h3M20 8V5h-3M4 16v3h3M20 16v3h-3M7 12h10"/></svg>
+              <span>สแกน</span>
             </button>
+            <input id="fDocNo" type="text" placeholder="หรือพิมพ์  ARSM1-FIX2511-00005" autocomplete="off">
           </div>
           <p class="hint" id="branchHint"></p>
           <!-- เตือนเลขซ้ำ — เตือนอย่างเดียว ไม่ห้ามบันทึก
@@ -104,220 +124,292 @@
             <span id="docDupeText"></span>
             <button type="button" id="btnOpenDupe">เปิดงานเดิม</button>
           </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="field">
-            <label for="fDateIn">วันที่รับงาน <span class="be" data-be="fDateIn"></span></label>
-            <input id="fDateIn" type="date">
+          <!-- วันที่กับสาขาเติมให้เอง ซ่อนไว้จนกว่าจะกดแก้ -->
+          <div class="meta-edit" id="metaEdit" hidden>
+            <div class="field">
+              <label for="fDateIn">วันที่รับงาน <span class="be" data-be="fDateIn"></span></label>
+              <input id="fDateIn" type="date">
+            </div>
+            <div class="field">
+              <label for="fBranch">สาขา</label>
+              <input id="fBranch" type="text" list="dlBranch" placeholder="เติมให้อัตโนมัติ" autocomplete="off">
+              <datalist id="dlBranch"></datalist>
+            </div>
           </div>
-          <div class="field">
-            <label for="fBranch">สาขา</label>
-            <input id="fBranch" type="text" list="dlBranch" placeholder="เติมให้อัตโนมัติ" autocomplete="off">
-            <datalist id="dlBranch"></datalist>
+        </section>
+
+        <!-- เลือกด้วยชิป กดทีเดียวจบ ไม่ต้องเปิด dropdown ทีละช่อง -->
+        <section class="card fields">
+          <div class="fset">
+            <div class="fset-hd"><label>แผนกส่งงาน <i class="req">*</i></label><span class="hint-sm">ใช้บ่อย</span></div>
+            <div class="chips" data-for="fProductType" data-field="productType" data-top="3"></div>
+            <select id="fProductType" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
           </div>
-        </div>
 
-        <div class="grid-2">
-          <div class="field"><label for="fProductType">แผนกส่งงาน <i class="req">*</i></label><select id="fProductType"></select></div>
-          <div class="field"><label for="fCategory">ประเภทสินค้า</label><select id="fCategory"></select></div>
-        </div>
+          <div class="rule"></div>
 
-        <div class="grid-2">
-          <div class="field"><label for="fPattern">ลวดลาย <i class="req">*</i></label><select id="fPattern"></select></div>
-          <div class="field"><label for="fPart">Part</label><select id="fPart"></select></div>
-        </div>
+          <div class="fset">
+            <div class="fset-hd"><label>ประเภทสินค้า</label></div>
+            <div class="chips" data-for="fCategory" data-field="category" data-top="4" data-none="ไม่ระบุ"></div>
+            <select id="fCategory" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
+          </div>
 
-        <div class="field">
-          <label for="fWeightIn">น้ำหนักรับซ่อม (ก.) <i class="req">*</i></label>
-          <input id="fWeightIn" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
-        </div>
+          <div class="rule"></div>
 
-        <div class="grid-2">
-          <div class="field"><label for="fDefectKind">อาการชำรุด — ลักษณะ <i class="req">*</i></label><select id="fDefectKind"></select></div>
-          <div class="field"><label for="fDefectSpot">อาการชำรุด — ตำแหน่ง <i class="req">*</i></label><select id="fDefectSpot"></select></div>
-        </div>
+          <div class="lay-2">
+            <div class="fset">
+              <label>ลวดลาย <i class="req">*</i></label>
+              <div class="chips" data-for="fPattern" data-field="pattern" data-top="4"></div>
+              <select id="fPattern" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
+            </div>
+            <div class="fset fset-w">
+              <label for="fWeightIn">น้ำหนักรับซ่อม <i class="req">*</i></label>
+              <div class="unit-input">
+                <input id="fWeightIn" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
+                <span>ก.</span>
+              </div>
+            </div>
+          </div>
 
-        <p class="label">ภาพถ่าย</p>
-        <div class="photo-grid">
-          <div class="photo-slot" data-slot="imgDoc"><span>ใบส่งซ่อม</span></div>
-          <div class="photo-slot" data-slot="imgDefect"><span>ภาพชำรุด <i class="req">*</i></span></div>
-          <div class="photo-slot" data-slot="imgWeightIn"><span>ชั่งตอนรับ</span></div>
-        </div>
+          <div class="rule"></div>
+
+          <div class="fset">
+            <div class="fset-hd"><label>Part</label></div>
+            <div class="chips" data-for="fPart" data-field="part" data-top="5" data-none="ไม่มี"></div>
+            <select id="fPart" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
+          </div>
+
+          <div class="rule"></div>
+
+          <div class="fset">
+            <label>อาการชำรุด <i class="req">*</i></label>
+            <div class="chips" data-for="fDefectKind" data-field="defectKind" data-top="5" data-tone="bad"></div>
+            <select id="fDefectKind" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
+            <div class="chips chips-sm" data-for="fDefectSpot" data-field="defectSpot" data-top="5" data-tone="bad" data-lead="ตำแหน่ง"></div>
+            <select id="fDefectSpot" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
+          </div>
+        </section>
+
+        <section class="card photo-card">
+          <span class="ph-lb">ภาพถ่าย</span>
+          <div class="photo-grid">
+            <div class="photo-slot" data-slot="imgDoc"><span>ใบส่งซ่อม</span></div>
+            <div class="photo-slot req-slot" data-slot="imgDefect"><span>ภาพชำรุด <i class="req">*</i></span></div>
+            <div class="photo-slot" data-slot="imgWeightIn"><span>ชั่งตอนรับ</span></div>
+          </div>
+          <span class="ph-note">แนบทีหลังได้ที่หน้ารายการ</span>
+        </section>
       </div>
 
       <div class="step-panel" data-panel="2" hidden>
-        <div class="field">
-          <label for="fStatus">สถานะ</label>
-          <select id="fStatus">
+
+        <section class="card">
+          <h2 class="sect">สถานะ</h2>
+          <div class="chips chips-lg" data-for="fStatus" data-field="status" data-all="1"></div>
+          <select id="fStatus" class="sel-hidden" tabindex="-1" aria-hidden="true">
             <option>รับงาน</option><option>กำลังซ่อม</option>
             <option>เสร็จสิ้น</option><option>ไม่ซ่อม</option>
           </select>
-        </div>
+        </section>
 
-        <div class="grid-2">
-          <div class="field">
-            <label for="fWeightOut">น้ำหนักส่ง (ก.) <i class="req">*</i></label>
-            <input id="fWeightOut" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
+        <section class="card">
+          <h2 class="sect">น้ำหนัก</h2>
+          <div class="wgrid">
+            <div>
+              <label>นน.รับซ่อม</label>
+              <div class="ro-val" id="wInEcho">—</div>
+            </div>
+            <div>
+              <label for="fWeightOut">นน.ส่งคืน <i class="req">*</i></label>
+              <div class="unit-input"><input id="fWeightOut" type="number" step="0.01" inputmode="decimal" placeholder="0.00"><span>ก.</span></div>
+            </div>
+            <div>
+              <label for="fWeightAdd">นน.เติม</label>
+              <div class="unit-input"><input id="fWeightAdd" type="number" step="0.01" inputmode="decimal" placeholder="0.00"><span>ก.</span></div>
+            </div>
+            <div id="diffBox">
+              <label id="diffLabel">สูญเสีย · คิดให้</label>
+              <div class="ro-val" id="diffValue">—</div>
+            </div>
           </div>
-          <div class="field">
-            <label for="fWeightAdd">นน.เติม (ก.)</label>
-            <input id="fWeightAdd" type="number" step="0.01" inputmode="decimal" placeholder="0.00">
+        </section>
+
+        <section class="card">
+          <h2 class="sect">งานซ่อม</h2>
+          <div class="lay-2">
+            <div class="fset">
+              <label>วิธีซ่อม <i class="req">*</i></label>
+              <div class="chips chips-sm" data-for="fMethod" data-field="method" data-top="4"></div>
+              <select id="fMethod" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
+            </div>
+            <div class="fset">
+              <label>ช่างผู้ซ่อม <i class="req">*</i></label>
+              <div class="chips chips-sm" data-for="fTechnician" data-field="technician" data-top="4"></div>
+              <select id="fTechnician" class="sel-hidden" tabindex="-1" aria-hidden="true"></select>
+            </div>
           </div>
-        </div>
+          <div class="lay-close">
+            <div class="field">
+              <label for="fDateOut">วันที่ปิดงาน <span class="be" data-be="fDateOut"></span></label>
+              <input id="fDateOut" type="date">
+              <p class="hint">เติมให้อัตโนมัติเมื่อเปลี่ยนสถานะเป็น “เสร็จสิ้น”</p>
+            </div>
+            <div class="field">
+              <label for="fNotes">หมายเหตุ</label>
+              <textarea id="fNotes" rows="2" placeholder="ไม่บังคับ"></textarea>
+            </div>
+          </div>
+        </section>
 
-        <div id="diffBox" class="diff-box" hidden>
-          <span class="diff-label">ส่วนต่างน้ำหนัก</span>
-          <span id="diffValue" class="diff-value">—</span>
-        </div>
-
-        <div class="grid-2">
-          <div class="field"><label for="fMethod">วิธีซ่อม <i class="req">*</i></label><select id="fMethod"></select></div>
-          <div class="field"><label for="fTechnician">ช่างผู้ซ่อม <i class="req">*</i></label><select id="fTechnician"></select></div>
-        </div>
-
-        <div class="field">
-          <label for="fDateOut">วันที่ปิดงาน <span class="be" data-be="fDateOut"></span></label>
-          <input id="fDateOut" type="date">
-          <p class="hint">เติมให้อัตโนมัติเมื่อเปลี่ยนสถานะเป็น “เสร็จสิ้น”</p>
-        </div>
-
-        <div class="field"><label for="fNotes">หมายเหตุ</label><textarea id="fNotes" rows="2"></textarea></div>
-
-        <p class="label">ภาพถ่าย</p>
-        <div class="photo-grid">
-          <div class="photo-slot" data-slot="imgWeightOut"><span>ชั่งตอนส่ง</span></div>
-          <div class="photo-slot" data-slot="imgDone"><span>งานเสร็จ</span></div>
-        </div>
+        <section class="card photo-card">
+          <span class="ph-lb">ภาพถ่าย</span>
+          <div class="photo-grid photo-2">
+            <div class="photo-slot" data-slot="imgWeightOut"><span>ชั่งตอนส่ง</span></div>
+            <div class="photo-slot" data-slot="imgDone"><span>งานเสร็จ</span></div>
+          </div>
+          <span class="ph-note">2 ช่องตอนปิดงาน</span>
+        </section>
       </div>
 
       <div id="formError" class="error" hidden></div>
 
+      <!-- แถบล่างค้างจอ บอกว่าเหลือช่องบังคับกี่ช่องโดยไม่ต้องเลื่อนหา -->
       <div class="form-actions">
-        <button id="btnCancelEdit" class="btn-ghost" hidden>ยกเลิก</button>
-        <button id="btnSave" class="btn-primary">บันทึก</button>
+        <div class="prog">
+          <span class="prog-txt" id="progText"></span>
+          <span class="prog-bar"><span id="progFill"></span></span>
+        </div>
+        <div class="fa-btns">
+          <button id="btnCancelEdit" class="btn-ghost" hidden>ยกเลิก</button>
+          <button id="btnSave" class="btn-primary">บันทึก</button>
+        </div>
       </div>
     </section>
 
     <!-- ─────────── หน้ารายการ ─────────── -->
     <section id="view-list" class="view" hidden>
-      <div class="view-head"><h2>รายการงานซ่อม</h2></div>
-      <div id="drillChip" class="drill-chip" hidden>
-        <span id="drillLabel"></span>
-        <button id="drillClear" title="ล้างตัวกรอง">✕</button>
-      </div>
-      <!-- ตัวกรองทั้งหมดอยู่ในตะแกรงเดียว
-           มือถือเรียงลงมาเหมือนเดิม จอคอมเรียงเป็นแถวเดียว -->
-      <div class="filter-grid">
-        <div class="field f-search">
-          <div class="input-row">
+
+      <div class="lfilter">
+        <div class="lf-row">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="6.4"/><path d="M16 16l4 4"/></svg>
             <input id="listSearch" type="search" placeholder="ค้นหา เลขงาน / ใบซ่อม / ลวดลาย / สาขา">
-            <button id="btnScanSearch" class="btn-icon" title="สแกน QR เพื่อหางาน" aria-label="สแกน QR เพื่อหางาน">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"/>
-                <path d="M7 12h10"/></svg>
-            </button>
+          </div>
+          <button id="btnScanSearch" class="btn-icon" title="สแกน QR เพื่อหางาน" aria-label="สแกน QR เพื่อหางาน">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V5h3M20 8V5h-3M4 16v3h3M20 16v3h-3M7 12h10"/></svg>
+          </button>
+          <select id="lTech" class="ctl" aria-label="ช่างผู้ซ่อม"></select>
+          <div class="ctl date-ctl">
+            <label for="lFrom">ตั้งแต่</label><input id="lFrom" type="date">
+            <label for="lTo">ถึง</label><input id="lTo" type="date">
           </div>
         </div>
-
-        <div class="field f-tech">
-          <label for="lTech">ช่างผู้ซ่อม</label>
-          <select id="lTech"></select>
+        <div class="lf-row2">
+          <div class="filter-row" id="statusFilter">
+            <button class="pill is-on" data-status="">ทั้งหมด</button>
+            <button class="pill" data-status="รับงาน">รับงาน</button>
+            <button class="pill" data-status="กำลังซ่อม">กำลังซ่อม</button>
+            <button class="pill" data-status="เสร็จสิ้น">เสร็จสิ้น</button>
+            <button class="pill pill-bad" data-status="ไม่ซ่อม">ไม่ซ่อม</button>
+          </div>
+          <p id="listCount" class="lcount"></p>
+          <button id="btnClearFilter" class="btn-clear" hidden>ล้างตัวกรอง ✕</button>
         </div>
-
-        <div class="field">
-          <label for="lFrom">ตั้งแต่ <span class="be" data-be="lFrom"></span></label>
-          <input id="lFrom" type="date">
-        </div>
-        <div class="field">
-          <label for="lTo">ถึง <span class="be" data-be="lTo"></span></label>
-          <input id="lTo" type="date">
+        <div id="drillChip" class="drill-chip" hidden>
+          <span id="drillLabel"></span>
+          <button id="drillClear" title="ล้างตัวกรอง">✕</button>
         </div>
       </div>
 
-      <div class="filter-row" id="statusFilter">
-        <button class="pill is-on" data-status="">ทั้งหมด</button>
-        <button class="pill" data-status="รับงาน">รับงาน</button>
-        <button class="pill" data-status="กำลังซ่อม">กำลังซ่อม</button>
-        <button class="pill" data-status="เสร็จสิ้น">เสร็จสิ้น</button>
-        <button class="pill" data-status="ไม่ซ่อม">ไม่ซ่อม</button>
-      </div>
-
-      <div class="count-row">
-        <p id="listCount" class="muted small"></p>
-        <button id="btnClearFilter" class="btn-clear" hidden>ล้างตัวกรอง ✕</button>
+      <div class="lhead">
+        <span>เลขงาน</span><span>ลวดลาย · อาการ</span><span>ใบส่งซ่อม</span>
+        <span>สาขา · วันที่</span><span class="ta-r">สูญเสีย</span><span class="ta-r">สถานะ</span>
       </div>
       <div id="jobList" class="job-list"></div>
     </section>
 
     <!-- ─────────── หน้ารายงาน ─────────── -->
     <section id="view-report" class="view" hidden>
-      <div class="view-head"><h2>รายงาน</h2></div>
-      <div class="grid-2">
-        <div class="field"><label for="rFrom">ตั้งแต่ <span class="be" data-be="rFrom"></span></label><input id="rFrom" type="date"></div>
-        <div class="field"><label for="rTo">ถึง <span class="be" data-be="rTo"></span></label><input id="rTo" type="date"></div>
-      </div>
-      <div class="grid-2">
-        <div class="field"><label for="rBranch">สาขา</label><select id="rBranch"></select></div>
-        <div class="field"><label for="rTech">ช่าง</label><select id="rTech"></select></div>
-      </div>
-      <p id="reportScope" class="muted small"></p>
-
-      <div class="report-block">
-        <h3>1 · จัดอันดับอาการชำรุด</h3>
-        <div id="repDefects" class="bars"></div>
-        <h4>อาการชำรุด × ลวดลาย</h4>
-        <div class="table-scroll"><table id="repMatrix" class="matrix"></table></div>
+      <div class="rfilter">
+        <div class="ctl date-ctl">
+          <label for="rFrom">ตั้งแต่</label><input id="rFrom" type="date">
+          <label for="rTo">ถึง</label><input id="rTo" type="date">
+        </div>
+        <select id="rBranch" class="ctl" aria-label="สาขา"></select>
+        <select id="rTech" class="ctl" aria-label="ช่าง"></select>
+        <button id="btnExportTop" class="btn-soft">ส่งออก CSV</button>
       </div>
 
-      <div class="report-block">
-        <h3>2 · สรุปน้ำหนักทองสูญเสีย</h3>
-        <div id="repLossTotal" class="loss-total"></div>
-        <h4>ต่อเดือน</h4>
-        <div id="repLossMonth" class="bars"></div>
-        <h4>ต่อวิธีซ่อม</h4>
-        <div id="repLossMethod" class="bars"></div>
+      <div class="kpis" id="repKpi"></div>
+
+      <div class="rtabs" id="repTabs">
+        <button class="rtab is-on" data-rtab="defect">อาการชำรุด</button>
+        <button class="rtab" data-rtab="loss">ทองสูญเสีย</button>
+        <button class="rtab" data-rtab="tech">ผลงานรายช่าง</button>
       </div>
 
-      <div class="report-block">
-        <h3>3 · ผลงานรายช่าง</h3>
-        <div class="table-scroll"><table id="repTech" class="matrix"></table></div>
+      <div class="rgrid" data-rpanel="defect">
+        <section class="card">
+          <h2 class="rh">จัดอันดับอาการชำรุด</h2>
+          <p class="rh-sub">กดแถวเพื่อดูรายการงาน</p>
+          <div id="repDefects" class="bars"></div>
+        </section>
+        <section class="card">
+          <div class="rh-row"><h2 class="rh">อาการชำรุด × ลวดลาย</h2><span class="rh-sub">ช่องเข้มคือจุดที่ต้องดู</span></div>
+          <div class="table-scroll"><table id="repMatrix" class="matrix"></table></div>
+        </section>
+      </div>
+
+      <div class="rgrid" data-rpanel="loss" hidden>
+        <section class="card">
+          <h2 class="rh">ต่อเดือน</h2>
+          <div id="repLossMonth" class="bars"></div>
+        </section>
+        <section class="card">
+          <h2 class="rh">ต่อวิธีซ่อม</h2>
+          <div id="repLossMethod" class="bars"></div>
+          <div id="repLossTotal" class="loss-foot"></div>
+        </section>
+      </div>
+
+      <div class="rgrid rgrid-1" data-rpanel="tech" hidden>
+        <section class="card">
+          <h2 class="rh">ผลงานรายช่าง</h2>
+          <div class="table-scroll"><table id="repTech" class="matrix"></table></div>
+        </section>
       </div>
     </section>
 
     <!-- ─────────── หน้าตั้งค่า ─────────── -->
     <section id="view-settings" class="view" hidden>
-      <div class="view-head"><h2>ตั้งค่า</h2></div>
 
-      <div class="report-block">
-        <h3>การเชื่อมต่อ</h3>
-        <div id="syncInfo" class="mini-list"></div>
-        <div class="btn-col">
-          <button id="btnSyncNow" class="btn-ghost">⟳ ซิงก์เดี๋ยวนี้</button>
-        </div>
-      </div>
+      <section class="card">
+        <h2 class="rh">การเชื่อมต่อ</h2>
+        <div id="syncInfo" class="stat-row"></div>
+        <button id="btnSyncNow" class="btn-soft w-full">↻ ซิงก์เดี๋ยวนี้</button>
+        <p class="hint">ซิงก์อัตโนมัติทุก 1 นาทีเมื่อออนไลน์</p>
+      </section>
 
       <!-- เห็นเฉพาะ admin — app.js ซ่อนบล็อกนี้ให้ staff -->
-      <div class="report-block" id="blockUsers" hidden>
-        <h3>ผู้ใช้งาน</h3>
+      <section class="card" id="blockUsers" hidden>
+        <h2 class="rh">ผู้ใช้งาน</h2>
+        <p class="rh-sub">แก้ได้เฉพาะชื่อที่แสดงบนหน้าล็อกอิน — PIN และสิทธิ์เข้าถึงไม่เปลี่ยนตาม</p>
         <div id="listUsers"></div>
-        <p class="hint">แก้ได้เฉพาะชื่อที่แสดงบนหน้าล็อกอิน — PIN และสิทธิ์เข้าถึงไม่ได้เปลี่ยนตาม</p>
-      </div>
+      </section>
 
-      <div class="report-block">
-        <h3>ช่างผู้ซ่อม</h3>
+      <section class="card">
+        <h2 class="rh">ช่างผู้ซ่อม</h2>
         <div id="listTech" class="mini-list"></div>
         <div class="input-row">
           <input id="newTech" type="text" placeholder="ชื่อช่างใหม่">
-          <button class="btn-sm" id="btnAddTech">เพิ่ม</button>
+          <button class="btn-soft" id="btnAddTech">เพิ่ม</button>
         </div>
-      </div>
+      </section>
 
-      <div class="report-block">
-        <h3>รายการตัวเลือก</h3>
-        <div class="field">
-          <label for="listPicker">เลือกรายการที่จะแก้</label>
-          <select id="listPicker">
+      <section class="card">
+        <div class="rh-row">
+          <h2 class="rh">รายการตัวเลือก</h2>
+          <select id="listPicker" class="ctl">
             <option value="patterns">ลวดลาย</option>
             <option value="productTypes">แผนกส่งงาน</option>
             <option value="categories">ประเภทสินค้า</option>
@@ -330,39 +422,44 @@
         <div id="listItems" class="mini-list"></div>
         <div class="input-row">
           <input id="newItem" type="text" placeholder="เพิ่มค่าใหม่">
-          <button class="btn-sm" id="btnAddItem">เพิ่ม</button>
+          <button class="btn-soft" id="btnAddItem">เพิ่ม</button>
         </div>
-      </div>
+      </section>
 
-      <div class="report-block">
-        <h3>ข้อมูล</h3>
-        <div class="btn-col">
-          <button id="btnExport" class="btn-ghost">📥 ส่งออกเป็น CSV (เปิดใน Excel)</button>
+      <section class="card card-wide">
+        <h2 class="rh">ข้อมูลและบัญชี</h2>
+        <div class="btn-2">
+          <button id="btnExport" class="btn-soft-2">📥 ส่งออกเป็น CSV · เปิดใน Excel</button>
           <button id="btnSignOut" class="btn-danger-ghost">ออกจากระบบ</button>
         </div>
         <p class="hint">ผู้ใช้และ PIN จัดการที่ Supabase → Authentication → Users</p>
-      </div>
+      </section>
     </section>
   </main>
 
-  <!-- ไอคอนเป็น SVG ไม่ใช่ตัวอักษรพิเศษ
-       เพราะ iOS แปลงสัญลักษณ์อย่าง ✎ ⚙ เป็นอิโมจิสี ทำให้แถบเมนูดูไม่เข้าชุดกัน -->
+  <!-- เมนูล่างสำหรับมือถือ — จอคอมซ่อนแล้วใช้ .rail ทางซ้ายแทน -->
   <nav class="tabbar">
     <button class="tab is-on" data-view="form">
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>บันทึก</button>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4l5 5-9 9H6v-5z"/></svg></span>บันทึก</button>
     <button class="tab" data-view="list">
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-        <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></span>รายการ</button>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>รายการ</button>
     <button class="tab" data-view="report">
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 20h18"/><rect x="5" y="11" width="3.4" height="6" rx="1"/>
-        <rect x="10.3" y="6" width="3.4" height="11" rx="1"/><rect x="15.6" y="13" width="3.4" height="4" rx="1"/></svg></span>รายงาน</button>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></span>รายงาน</button>
     <button class="tab" data-view="settings">
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3.2"/>
-        <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.11a1.6 1.6 0 0 0-1.05-1.46 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.11a1.6 1.6 0 0 0 1.46-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H9a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.11a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.11a1.6 1.6 0 0 0-1.47 1Z"/></svg></span>ตั้งค่า</button>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21"/></svg></span>ตั้งค่า</button>
   </nav>
+</div>
+
+<!-- ตัวเลือกทั้งหมดของชิป — เปิดเมื่อกด "ทั้งหมด ▾" -->
+<div id="picker" class="modal" hidden>
+  <div class="picker-box">
+    <div class="picker-hd">
+      <h3 id="pickerTitle"></h3>
+      <button id="pickerClose" aria-label="ปิด">✕</button>
+    </div>
+    <input id="pickerSearch" type="search" placeholder="ค้นหา…" autocomplete="off">
+    <div id="pickerList" class="picker-list"></div>
+  </div>
 </div>
 
 <div id="scanner" class="modal" hidden>
@@ -384,9 +481,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=17"></script>
-<script src="api.js?v=17"></script>
-<script src="store.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="config.js?v=18"></script>
+<script src="api.js?v=18"></script>
+<script src="store.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>
