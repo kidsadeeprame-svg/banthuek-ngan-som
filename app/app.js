@@ -915,6 +915,85 @@ $('#btnScanClose').addEventListener('click', closeScanner);
 /* ═════════════ รายการ ═════════════ */
 
 let listFilter = { q: '', status: '', from: '', to: '', tech: '' };
+
+/* ═════════════ เรียงลำดับรายการ ═════════════
+   ค่าเริ่มต้นคือวันที่ใหม่→เก่า ซึ่งเป็นแบบเดียวที่จัดกลุ่มตามวันได้
+   พอเรียงด้วยอย่างอื่น หัววันจะหายไปเพราะกลุ่มไม่มีความหมายแล้ว */
+
+const SORTS = {
+  dateIn:  { label: 'วันที่รับงาน', asc: 'เก่า→ใหม่', desc: 'ใหม่→เก่า', def: 'desc' },
+  id:      { label: 'เลขงาน',      asc: 'น้อย→มาก', desc: 'มาก→น้อย', def: 'desc' },
+  docNo:   { label: 'เลขที่ใบส่งซ่อม', asc: 'ก→ฮ', desc: 'ฮ→ก', def: 'asc' },
+  pattern: { label: 'ลวดลาย',      asc: 'ก→ฮ', desc: 'ฮ→ก', def: 'asc' },
+  branch:  { label: 'สาขา',        asc: 'ก→ฮ', desc: 'ฮ→ก', def: 'asc' },
+  loss:    { label: 'สูญเสีย',      asc: 'น้อย→มาก', desc: 'มาก→น้อย', def: 'desc' },
+  status:  { label: 'สถานะ',       asc: 'รับงาน→ไม่ซ่อม', desc: 'ไม่ซ่อม→รับงาน', def: 'asc' },
+};
+const STATUS_ORDER = ['รับงาน', 'กำลังซ่อม', 'เสร็จสิ้น', 'ไม่ซ่อม'];
+let listSort = { key: 'dateIn', dir: 'desc' };
+
+function sortValue(j, key) {
+  if (key === 'loss')   { const d = lossOf(j); return d === null ? null : d; }
+  if (key === 'status') return STATUS_ORDER.indexOf(j.status);
+  return j[key] || '';
+}
+
+function sortRows(rows) {
+  const { key, dir } = listSort;
+  const sign = dir === 'asc' ? 1 : -1;
+  return rows.slice().sort((a, b) => {
+    const x = sortValue(a, key), y = sortValue(b, key);
+    // งานที่ยังไม่มีค่า (เช่นยังไม่ชั่งครบ) ไปท้ายเสมอ ไม่ว่าเรียงทางไหน
+    const nx = x === null || x === '', ny = y === null || y === '';
+    if (nx !== ny) return nx ? 1 : -1;
+    let c = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'th');
+    c *= sign;
+    // ค่าเท่ากันให้เอางานใหม่ขึ้นก่อนเสมอ ไม่ว่ากำลังเรียงทางไหน
+    if (c === 0 && key !== 'id') c = b.id.localeCompare(a.id);
+    return c;
+  });
+}
+
+function paintSortUI() {
+  const { key, dir } = listSort;
+  $$('#lhead .lh').forEach(h => {
+    const on = h.dataset.sort === key;
+    h.classList.toggle('on', on);
+    h.classList.toggle('asc',  on && dir === 'asc');
+    h.classList.toggle('desc', on && dir === 'desc');
+  });
+  const s = SORTS[key];
+  $('#btnSort').textContent = `เรียง ${s.label} ${s[dir]} ⇅`;
+}
+
+function setSort(key, dir) {
+  if (!SORTS[key]) return;
+  // กดคอลัมน์เดิมซ้ำ = สลับทาง · กดคอลัมน์ใหม่ = ใช้ทางที่เป็นธรรมชาติของคอลัมน์นั้น
+  listSort = { key, dir: dir || (listSort.key === key
+    ? (listSort.dir === 'asc' ? 'desc' : 'asc') : SORTS[key].def) };
+  renderList();
+  $('main').scrollTop = 0;
+}
+
+$('#lhead').addEventListener('click', e => {
+  const h = e.target.closest('[data-sort]'); if (h) setSort(h.dataset.sort);
+});
+
+$('#btnSort').addEventListener('click', () => {
+  $('#sortList').innerHTML = Object.entries(SORTS).flatMap(([k, s]) =>
+    ['desc', 'asc'].map(d => `<button type="button" data-sk="${k}" data-sd="${d}"
+      class="${listSort.key === k && listSort.dir === d ? 'on' : ''}">
+      <span>${esc(s.label)}</span><i>${esc(s[d])}</i></button>`)).join('');
+  $('#sortMenu').hidden = false;
+});
+const closeSort = () => { $('#sortMenu').hidden = true; };
+$('#sortClose').addEventListener('click', closeSort);
+$('#sortMenu').addEventListener('click', e => {
+  if (e.target.id === 'sortMenu') return closeSort();
+  const b = e.target.closest('[data-sk]'); if (!b) return;
+  setSort(b.dataset.sk, b.dataset.sd);
+  closeSort();
+});
 let drill = null;          // { label, set } เมื่อกดเข้ามาจากหน้ารายงาน
 
 ['#lFrom', '#lTo'].forEach(s => $(s).addEventListener('change', () => {
@@ -981,6 +1060,8 @@ function renderList() {
     return [j.id, j.docNo, j.pattern, j.branch, j.defectKind, j.defectSpot, j.technician]
       .join(' ').toLowerCase().includes(listFilter.q);
   });
+  const sorted = sortRows(rows);
+  paintSortUI();
 
   $('#drillChip').hidden = !drill;
   if (drill) $('#drillLabel').textContent = `จากรายงาน: ${drill.label}`;
@@ -1013,18 +1094,23 @@ function renderList() {
     p.innerHTML = `${esc(p.dataset.status || 'ทั้งหมด')} <i>${n}</i>`;
   });
 
-  if (!rows.length) { $('#jobList').innerHTML = `<p class="empty">ไม่พบรายการ</p>`; return; }
+  if (!sorted.length) { $('#jobList').innerHTML = `<p class="empty">ไม่พบรายการ</p>`; return; }
 
-  /* จัดกลุ่มตามวันรับงาน — ช่างมองหางานของวันนี้เป็นหลัก */
+  /* จัดกลุ่มตามวันรับงาน — ช่างมองหางานของวันนี้เป็นหลัก
+     ทำได้เฉพาะตอนเรียงด้วยวันที่ ถ้าเรียงด้วยอย่างอื่นวันจะสลับไปมา
+     หัวกลุ่มก็ไม่มีความหมาย จึงแสดงเป็นรายการเรียงยาวแทน */
+  const byDay = listSort.key === 'dateIn';
   const today = todayISO();
   let out = '', lastDay = null;
-  for (const j of rows) {
-    const day = j.dateIn || '';
-    if (day !== lastDay) {
-      lastDay = day;
-      const n = rows.filter(x => (x.dateIn || '') === day).length;
-      const name = !day ? 'ไม่ระบุวันที่' : day === today ? `วันนี้ · ${thaiDate(day)}` : thaiDate(day);
-      out += `<div class="day-hd">${esc(name)} <b>· ${n} งาน</b></div>`;
+  for (const j of sorted) {
+    if (byDay) {
+      const day = j.dateIn || '';
+      if (day !== lastDay) {
+        lastDay = day;
+        const n = sorted.filter(x => (x.dateIn || '') === day).length;
+        const name = !day ? 'ไม่ระบุวันที่' : day === today ? `วันนี้ · ${thaiDate(day)}` : thaiDate(day);
+        out += `<div class="day-hd">${esc(name)} <b>· ${n} งาน</b></div>`;
+      }
     }
     const d = lossOf(j);
     out += `<button type="button" class="job-row s-${esc(j.status)}" data-id="${esc(j.id)}">
@@ -1032,7 +1118,10 @@ function renderList() {
       <span class="jr-main">${esc(j.pattern || '—')} <u>· ${esc(j.defectKind || '')}${j.defectSpot ? ' ' + esc(j.defectSpot) : ''}</u></span></span>
       <span class="jr-2"><span class="jr-doc">${esc(j.docNo || '—')}</span>
       <span class="jr-where">${esc(j.branch || '—')} · ${j.dateIn ? j.dateIn.slice(8) + '/' + j.dateIn.slice(5, 7) : '—'}</span>
-      <span class="jr-loss">${d !== null && d > 0.005 ? d.toFixed(2) : '<span class="muted">—</span>'}</span>
+      <span class="jr-loss">${
+        d === null    ? '<span class="muted" title="ยังชั่งไม่ครบ 2 ครั้ง">—</span>'
+        : d > 0.005   ? d.toFixed(2)
+        : '<span class="muted" title="ชั่งครบแล้ว ไม่มีสูญเสีย">0.00</span>'}</span>
       <span class="jr-st"><span class="st st-${esc(j.status)}">${esc(j.status)}</span></span></span>
     </button>`;
   }
@@ -1328,6 +1417,8 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (!$('#scanner').hidden)  closeScanner();
   if (!$('#lightbox').hidden) $('#lightbox').hidden = true;
+  if (!$('#picker').hidden)   closePicker();
+  if (!$('#sortMenu').hidden) closeSort();
 });
 
 /* ═════════════ เริ่มทำงาน ═════════════ */

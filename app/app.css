@@ -332,7 +332,17 @@ main{padding:0 0 104px}
 .pill.is-on i{color:var(--gold-dp)}
 .pill-bad{border-color:var(--bad-soft-ln);color:var(--bad-2)}
 .lcount{margin:0;font-size:.78rem;color:var(--ink-4);font-weight:600;white-space:nowrap}
+.sort-btn{margin-left:auto}
 .lhead{display:none}
+/* หัวตารางกดเรียงได้ ลูกศรโผล่เฉพาะคอลัมน์ที่เรียงอยู่ */
+.lh{border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;
+    display:flex;align-items:center;gap:5px;min-width:0}
+.lh.ta-r{justify-content:flex-end}
+.lh::after{content:'';font-size:.7rem;opacity:0}
+.lh:hover{color:var(--gold-dk)}
+.lh.on{color:var(--gold-dk)}
+.lh.on.asc::after{content:'▲';opacity:1}
+.lh.on.desc::after{content:'▼';opacity:1}
 .day-hd{font-size:.78rem;font-weight:700;color:var(--ink-4);padding:12px 2px 6px}
 .day-hd b{font-weight:400;color:var(--label)}
 .job-list{display:flex;flex-direction:column;gap:7px}

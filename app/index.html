@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=18">
+<link rel="stylesheet" href="app.css?v=19">
 </head>
 <body>
 
@@ -313,6 +313,8 @@
             <button class="pill pill-bad" data-status="ไม่ซ่อม">ไม่ซ่อม</button>
           </div>
           <p id="listCount" class="lcount"></p>
+          <!-- ปุ่มเรียงสำหรับมือถือ จอคอมกดที่หัวตารางได้ตรง ๆ -->
+          <button id="btnSort" class="btn-clear sort-btn"></button>
           <button id="btnClearFilter" class="btn-clear" hidden>ล้างตัวกรอง ✕</button>
         </div>
         <div id="drillChip" class="drill-chip" hidden>
@@ -321,9 +323,13 @@
         </div>
       </div>
 
-      <div class="lhead">
-        <span>เลขงาน</span><span>ลวดลาย · อาการ</span><span>ใบส่งซ่อม</span>
-        <span>สาขา · วันที่</span><span class="ta-r">สูญเสีย</span><span class="ta-r">สถานะ</span>
+      <div class="lhead" id="lhead">
+        <button class="lh" data-sort="id">เลขงาน</button>
+        <button class="lh" data-sort="pattern">ลวดลาย · อาการ</button>
+        <button class="lh" data-sort="docNo">ใบส่งซ่อม</button>
+        <button class="lh" data-sort="dateIn">สาขา · วันที่</button>
+        <button class="lh ta-r" data-sort="loss">สูญเสีย</button>
+        <button class="lh ta-r" data-sort="status">สถานะ</button>
       </div>
       <div id="jobList" class="job-list"></div>
     </section>
@@ -450,6 +456,17 @@
   </nav>
 </div>
 
+<!-- เมนูเรียงลำดับของหน้ารายการ -->
+<div id="sortMenu" class="modal" hidden>
+  <div class="picker-box">
+    <div class="picker-hd">
+      <h3>เรียงตาม</h3>
+      <button id="sortClose" aria-label="ปิด">✕</button>
+    </div>
+    <div id="sortList" class="picker-list"></div>
+  </div>
+</div>
+
 <!-- ตัวเลือกทั้งหมดของชิป — เปิดเมื่อกด "ทั้งหมด ▾" -->
 <div id="picker" class="modal" hidden>
   <div class="picker-box">
@@ -481,9 +498,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=18"></script>
-<script src="api.js?v=18"></script>
-<script src="store.js?v=18"></script>
-<script src="app.js?v=18"></script>
+<script src="config.js?v=19"></script>
+<script src="api.js?v=19"></script>
+<script src="store.js?v=19"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>
