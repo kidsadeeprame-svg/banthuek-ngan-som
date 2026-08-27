@@ -246,6 +246,21 @@ main{padding:0 0 104px}
 .photo-card{display:flex;flex-direction:column;gap:10px}
 .ph-lb{font-size:.83rem;font-weight:600}
 .ph-note{font-size:.74rem;color:var(--label)}
+.ph-local{align-self:flex-start;border:1px solid var(--line-2);background:var(--white);
+  border-radius:99px;padding:7px 14px;font-size:.78rem;font-weight:600;color:var(--ink-2)}
+.ph-local:active{background:var(--gold-lt);border-color:var(--gold-ln)}
+
+/* กล่องดูรูปไฟล์เต็มที่เก็บในเครื่อง */
+.local-body{overflow-y:auto;padding:14px 15px 16px;display:flex;flex-direction:column;gap:12px}
+.local-body p{margin:0;font-size:.85rem;line-height:1.6;color:var(--ink-3)}
+.local-shot{display:flex;flex-direction:column;gap:5px}
+.local-shot img{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--ro)}
+.local-shot span{font-size:.76rem;color:var(--ink-4)}
+.path-row{display:flex;gap:8px;align-items:stretch}
+.path-row code{flex:1;min-width:0;padding:10px 12px;background:var(--ro);border:1px solid var(--line-3);
+  border-radius:var(--r-sm);font-family:var(--mono);font-size:.74rem;line-height:1.5;
+  word-break:break-all;user-select:all}
+.path-row button{flex:none;align-self:flex-start}
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .photo-2{grid-template-columns:1fr 1fr}
 .photo-slot{

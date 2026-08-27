@@ -269,6 +269,11 @@ const Store = (() => {
 
   return {
     boot, pull, sync, saveJob, saveLists, photoUrl, wipe, toDb, fromDb,
+    /* ที่เก็บค่าเล็ก ๆ ทั่วไป — ใช้เก็บ handle ของโฟลเดอร์รูปในเครื่อง
+       ซึ่งเป็นออบเจกต์ที่ localStorage เก็บไม่ได้ ต้องใช้ IndexedDB เท่านั้น */
+    kvGet: k => get('kv', k),
+    kvPut: (k, v) => put('kv', v, k),
+    kvDel: k => del('kv', k),
     onChange: f => listeners.push(f),
     get jobs()     { return jobs; },
     get lists()    { return lists; },

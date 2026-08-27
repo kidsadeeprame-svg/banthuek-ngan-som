@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=19">
+<link rel="stylesheet" href="app.css?v=20">
 </head>
 <body>
 
@@ -198,6 +198,7 @@
             <div class="photo-slot" data-slot="imgWeightIn"><span>ชั่งตอนรับ</span></div>
           </div>
           <span class="ph-note">แนบทีหลังได้ที่หน้ารายการ</span>
+          <button type="button" class="ph-local" data-local hidden>📁 รูปในเครื่อง</button>
         </section>
       </div>
 
@@ -268,6 +269,7 @@
             <div class="photo-slot" data-slot="imgDone"><span>งานเสร็จ</span></div>
           </div>
           <span class="ph-note">2 ช่องตอนปิดงาน</span>
+          <button type="button" class="ph-local" data-local hidden>📁 รูปในเครื่อง</button>
         </section>
       </div>
 
@@ -456,6 +458,17 @@
   </nav>
 </div>
 
+<!-- รูปไฟล์เต็มที่เก็บในเครื่อง -->
+<div id="localBox" class="modal" hidden>
+  <div class="picker-box">
+    <div class="picker-hd">
+      <h3 id="localTitle">รูปในเครื่อง</h3>
+      <button id="localClose" aria-label="ปิด">✕</button>
+    </div>
+    <div id="localBody" class="local-body"></div>
+  </div>
+</div>
+
 <!-- เมนูเรียงลำดับของหน้ารายการ -->
 <div id="sortMenu" class="modal" hidden>
   <div class="picker-box">
@@ -498,9 +511,9 @@
 <div id="toast" class="toast" hidden></div>
 <input type="file" id="filePicker" accept="image/*" hidden>
 
-<script src="config.js?v=19"></script>
-<script src="api.js?v=19"></script>
-<script src="store.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="config.js?v=20"></script>
+<script src="api.js?v=20"></script>
+<script src="store.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

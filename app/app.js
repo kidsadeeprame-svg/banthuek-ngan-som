@@ -589,6 +589,7 @@ function startNewJob() {
   $('#branchHint').textContent = '';
   paintDupe();
   $('#formError').hidden = true;
+  paintLocalBtn();
   gotoStep('1'); paintTopbar();
 }
 
@@ -608,6 +609,7 @@ function openJob(id) {
   $('#formError').hidden = true;
   showView('form');
   // งานที่ยังไม่ปิด เปิดมาที่ขั้นรับงาน · งานที่ปิดแล้วเปิดมาที่ขั้นปิดงานเลย
+  paintLocalBtn();
   gotoStep(j.status === 'รับงาน' ? '1' : '2');
 }
 $('#btnCancelEdit').addEventListener('click', startNewJob);
@@ -783,6 +785,105 @@ function resize(file, maxSide, quality) {
 }
 
 function openLightbox(src) { $('#lightboxImg').src = src; $('#lightbox').hidden = false; }
+
+/* ═════════════ รูปไฟล์เต็มในเครื่อง ═════════════
+   สคริปต์สำรองข้อมูลเก็บไฟล์เต็มไว้ที่ <LOCAL_PHOTO_DIR>\<เลขงาน>\<ช่อง>.jpg
+   (บน cloud เก็บแค่รูปย่อ 400px เพื่อไม่ให้เกินโควตา)
+
+   เว็บสั่งเปิด File Explorer ไม่ได้ เบราว์เซอร์ห้ามไว้ทุกตัวเพื่อความปลอดภัย
+   ลิงก์ file:/// จากหน้า https ก็ถูกบล็อกเงียบ ๆ ไม่มีทางเลี่ยง
+   จึงทำ 2 ทางแทน
+     1. Chrome บนคอม — ขอสิทธิ์อ่านโฟลเดอร์ครั้งเดียว แล้วเปิดดูรูปเต็ม
+        ในแอปได้เลย ไม่ต้องออกไป Explorer (ดีกว่าเปิดโฟลเดอร์ด้วยซ้ำ)
+     2. เครื่องอื่น/มือถือ — คัดลอกที่อยู่ให้ไปวางในช่อง address ของ Explorer */
+
+const canPickDir = () => typeof window.showDirectoryPicker === 'function';
+const localRoot = () => (C.LOCAL_PHOTO_DIR || '').replace(/[\\/]+$/, '');
+const localPathOf = id => localRoot() ? `${localRoot()}\\${id}` : '';
+
+async function dirHandle(ask) {
+  let h = null;
+  try { h = await Store.kvGet('photoDir'); } catch { h = null; }
+  if (h) {
+    const p = await h.queryPermission({ mode: 'read' });
+    if (p === 'granted') return h;
+    // สิทธิ์หมดอายุเมื่อปิดเบราว์เซอร์ ขอใหม่ได้แต่ต้องมาจากการกดปุ่มเท่านั้น
+    if (ask && await h.requestPermission({ mode: 'read' }) === 'granted') return h;
+    if (!ask) return null;
+  }
+  if (!ask) return null;
+  try {
+    h = await window.showDirectoryPicker({ id: 'gsrPhotos', mode: 'read' });
+  } catch { return null; }              // ผู้ใช้กดยกเลิก
+  // จำไว้เพื่อไม่ต้องเลือกซ้ำทุกครั้ง — เก็บไม่ได้ก็ยังใช้งานรอบนี้ได้ตามปกติ
+  try { await Store.kvPut('photoDir', h); } catch {}
+  return h;
+}
+
+function pathBlock(id) {
+  const p = localPathOf(id);
+  if (!p) return `<p>ยังไม่ได้ตั้งที่อยู่โฟลเดอร์รูป — ใส่ค่า <code>LOCAL_PHOTO_DIR</code> ในไฟล์ <code>app/config.js</code></p>`;
+  return `<p>ที่อยู่โฟลเดอร์ของงานนี้ — คัดลอกไปวางในช่อง address ของ File Explorer</p>
+    <div class="path-row"><code id="localPath">${esc(p)}</code></div>
+    <button type="button" class="btn-soft" id="btnCopyPath">คัดลอกที่อยู่</button>`;
+}
+
+async function showLocalPhotos(id) {
+  const box = $('#localBody');
+  $('#localTitle').textContent = `รูปในเครื่อง · ${id}`;
+  $('#localBox').hidden = false;
+
+  if (!canPickDir()) {
+    box.innerHTML = `<p>เบราว์เซอร์นี้เปิดไฟล์ในเครื่องให้ไม่ได้ (ใช้ได้กับ Chrome/Edge บนคอมเท่านั้น)</p>`
+                  + pathBlock(id);
+    return;
+  }
+
+  box.innerHTML = `<p>กำลังเปิดโฟลเดอร์…</p>`;
+  const root = await dirHandle(true);
+  if (!root) { box.innerHTML = `<p>ยังไม่ได้เลือกโฟลเดอร์</p>` + pathBlock(id); return; }
+
+  try {
+    const jobDir = await root.getDirectoryHandle(id);
+    const shots = [];
+    for await (const [name, h] of jobDir.entries()) {
+      if (h.kind !== 'file' || !/\.(jpe?g|png)$/i.test(name)) continue;
+      const f = await h.getFile();
+      shots.push({ name, url: URL.createObjectURL(f), kb: Math.round(f.size / 1024) });
+    }
+    if (!shots.length) { box.innerHTML = `<p>โฟลเดอร์ <b>${esc(id)}</b> ไม่มีไฟล์รูป</p>` + pathBlock(id); return; }
+    shots.sort((a, b) => a.name.localeCompare(b.name));
+    box.innerHTML = shots.map(s => {
+      const slot = s.name.replace(/\.[^.]+$/, '');
+      return `<div class="local-shot"><img src="${s.url}" alt="${esc(s.name)}" loading="lazy">
+        <span>${esc(SLOT_LABEL[slot] || slot)} · ${s.kb} KB · ไฟล์เต็ม</span></div>`;
+    }).join('') + pathBlock(id);
+  } catch (e) {
+    box.innerHTML = e.name === 'NotFoundError'
+      ? `<p>ไม่พบโฟลเดอร์ <b>${esc(id)}</b> ในที่ที่เลือกไว้<br>
+         เลือกโฟลเดอร์ <code>photos</code> (ตัวที่ข้างในมีโฟลเดอร์ย่อยชื่อเลขงาน) แล้วลองใหม่</p>`
+         + `<button type="button" class="btn-soft" id="btnPickDir">เลือกโฟลเดอร์ใหม่</button>` + pathBlock(id)
+      : `<p>เปิดไม่สำเร็จ: ${esc(e.message)}</p>` + pathBlock(id);
+  }
+}
+
+$('#localClose').addEventListener('click', () => { $('#localBox').hidden = true; });
+$('#localBox').addEventListener('click', async e => {
+  if (e.target.id === 'localBox') { $('#localBox').hidden = true; return; }
+  if (e.target.id === 'btnCopyPath') {
+    try { await navigator.clipboard.writeText($('#localPath').textContent); toast('คัดลอกที่อยู่แล้ว'); }
+    catch { toast('คัดลอกไม่ได้ — เลือกข้อความแล้วกด Ctrl+C'); }
+  }
+  if (e.target.id === 'btnPickDir') { await Store.kvDel('photoDir'); showLocalPhotos(editing); }
+});
+
+/* ปุ่มโผล่เฉพาะตอนแก้งานที่บันทึกแล้ว งานใหม่ยังไม่มีโฟลเดอร์ให้ดู */
+function paintLocalBtn() {
+  $$('[data-local]').forEach(b => { b.hidden = !editing; });
+}
+$$('[data-local]').forEach(b => b.addEventListener('click', () => {
+  if (editing) showLocalPhotos(editing);
+}));
 $('#btnLightboxClose').addEventListener('click', () => { $('#lightbox').hidden = true; });
 
 /* ═════════════ สแกน QR ═════════════ */
@@ -1419,6 +1520,7 @@ document.addEventListener('keydown', e => {
   if (!$('#lightbox').hidden) $('#lightbox').hidden = true;
   if (!$('#picker').hidden)   closePicker();
   if (!$('#sortMenu').hidden) closeSort();
+  if (!$('#localBox').hidden) $('#localBox').hidden = true;
 });
 
 /* ═════════════ เริ่มทำงาน ═════════════ */
