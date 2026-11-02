@@ -758,7 +758,7 @@ $('#filePicker').addEventListener('change', async e => {
   if (!file || !pickingSlot) return;
   toast('กำลังย่อรูป…');
   const [view, thumb] = await Promise.all([
-    resize(file, C.PHOTO_VIEW, .75), resize(file, C.PHOTO_THUMB, .7),
+    resize(file, C.PHOTO_VIEW, C.PHOTO_VIEW_Q ?? .6), resize(file, C.PHOTO_THUMB, .7),
   ]);
   draftPhotos[pickingSlot] = { view, thumb, url: URL.createObjectURL(thumb) };
   await renderPhotoSlots(editing ? Store.jobs.find(j => j.id === editing) : null);
