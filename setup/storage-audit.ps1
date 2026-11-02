@@ -113,14 +113,23 @@ $bak = Join-Path $root 'backup\data\orphans-deleted.csv'
 $orph | Export-Csv $bak -NoTypeInformation -Encoding utf8
 Say "จดรายชื่อที่จะลบไว้ที่ $bak" 'DarkGray'
 
-$gone = 0
+# นับจากที่เซิร์ฟเวอร์ตอบว่าลบจริง ไม่ใช่จำนวนที่ส่งไป
+# ถ้าไม่มีสิทธิ์ลบ Supabase ตอบ 200 พร้อม [] เงียบ ๆ — เคยหลงรายงานว่าลบครบมาแล้ว
+$gone = 0; $sent = 0
 for ($i = 0; $i -lt $orph.Count; $i += 100) {
   $slice = $orph[$i..([Math]::Min($i + 99, $orph.Count - 1))]
   $body = @{ prefixes = @($slice | ForEach-Object { $_.path }) } | ConvertTo-Json -Compress
-  Invoke-RestMethod -Method Delete -Headers $HJ `
+  $resRaw = Invoke-RestMethod -Method Delete -Headers $HJ `
     -Uri "$($cfg.supabaseUrl)/storage/v1/object/photos" `
-    -Body ([Text.Encoding]::UTF8.GetBytes($body)) | Out-Null
-  $gone += $slice.Count
-  Say "  ลบแล้ว $gone/$($orph.Count)"
+    -Body ([Text.Encoding]::UTF8.GetBytes($body))
+  $gone += @($resRaw | Where-Object { $_ }).Count
+  $sent += $slice.Count
+  Say "  ส่งแล้ว $sent/$($orph.Count) · ลบจริง $gone"
 }
-Say "ลบไฟล์กำพร้าครบ $gone ไฟล์ · คืนพื้นที่ $([Math]::Round(($orph | Measure-Object size -Sum).Sum/1MB)) MB" 'Green'
+if ($gone -eq 0) {
+  Say 'เซิร์ฟเวอร์ไม่ได้ลบอะไรเลย — บัญชีนี้ยังไม่มีสิทธิ์ลบรูป' 'Red'
+  Say 'รัน setup/storage-delete-open.sql ใน Supabase SQL Editor ก่อน แล้วสั่งใหม่' 'Yellow'
+  exit 1
+}
+Say "ลบไฟล์กำพร้าจริง $gone/$($orph.Count) ไฟล์" 'Green'
+Say 'อย่าลืมรัน setup/storage-delete-close.sql เพื่อปิดสิทธิ์ลบกลับ' 'Yellow'
